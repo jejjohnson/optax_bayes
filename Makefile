@@ -62,7 +62,8 @@ check-env-%:
 # Phony declarations
 # ---------------------------------------------------------------------------
 .PHONY: help install lint format typecheck test test-cov \
-        precommit build clean version docs docs-serve docs-deploy
+        precommit build clean version docs docs-serve docs-deploy \
+        gh-labels
 
 .DEFAULT_GOAL := help
 
@@ -175,3 +176,6 @@ docs-serve: ## 🌐 Serve documentation locally
 
 docs-deploy: ## 🚀 Deploy documentation to GitHub Pages
 	uv run --group docs mkdocs gh-deploy --force
+
+gh-labels: ## 🏷️  Bootstrap the GitHub label taxonomy (type / area / layer / wave / priority)
+	bash .github/scripts/create-labels.sh

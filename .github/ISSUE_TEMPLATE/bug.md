@@ -13,24 +13,27 @@ labels: ["type:bug"]
 # Minimal reproducing example.
 ```
 
-## Expected Behaviour
+## Expected Behavior
 <!-- What should happen. -->
 
-## Actual Behaviour
-<!-- What happens instead. Include traceback. -->
+## Actual Behavior
+<!-- What happens instead. Include traceback if relevant. -->
 
 ## Environment
-- `optax_bayes` version:
-- `jax` / `optax` / `gaussx` versions:
+- Package version:
 - Python:
 - Platform:
+- Key dependency versions:
 
 ## References & Existing Code
-- Related code: `src/optax_bayes/...`
-- Related issue/PR: #
+- Related code: `<path>`
+- Related issue / PR: #
 
 ## Implementation Steps (fix)
-- [ ] ...
+- [ ] Reproduce locally
+- [ ] Root-cause analysis
+- [ ] Fix at `<path>`
+- [ ] Add regression test
 
 ## Definition of Done
 - [ ] Regression test captures the bug
@@ -38,10 +41,11 @@ labels: ["type:bug"]
 - [ ] `make test && make lint && make typecheck` green
 
 ## Testing
-<!-- Regression test path + what it asserts. -->
+- [ ] Regression test at `tests/<path>::<name>` — asserts <what>
 
 ## Documentation
 <!-- If user-facing behaviour changed, update relevant pages. -->
+- [ ] N/A, or: update `<path>`
 
 ## Relationships
 - Parent (theme epic, if any): #

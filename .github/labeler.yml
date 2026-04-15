@@ -1,24 +1,73 @@
-"ci":
+# PR auto-labeling rules for optax_bayes.
+#
+# Applied by .github/workflows/label-pr.yml using actions/labeler.
+# Labels referenced here must exist — run `make gh-labels` to create them.
+# The `dependencies` label is also created by the bootstrap script so this
+# file works on a fresh repo with no manual label setup.
+#
+# Scopes map file paths to the standard taxonomy:
+#   area:*   — which part of the project the change touches
+#   layer:*  — which layer of the L0/L1/L2 stack (architecture.md §Three-Layer Stack)
+#   type:*   — left to issue templates (NOT auto-applied on PRs)
+
+"area:engineering":
   - changed-files:
-    - any-glob-to-any-file: ".github/workflows/**"
+    - any-glob-to-any-file:
+      - ".github/**"
+      - "pyproject.toml"
+      - "Makefile"
+      - ".pre-commit-config.yaml"
+      - "uv.lock"
+
+"area:docs":
+  - changed-files:
+    - any-glob-to-any-file:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "notebooks/**"
+      - "*.md"
+
+"area:testing":
+  - changed-files:
+    - any-glob-to-any-file: "tests/**"
+
+"area:code":
+  - changed-files:
+    - any-glob-to-any-file: "src/optax_bayes/**"
+
+# --- Layer scopes — match the optax_bayes three-layer stack ---------------
+# (architecture.md §Three-Layer Stack; §Package Layout)
+#
+#   L0 _src/primitives.py, _src/hessians.py, _src/conversions.py
+#   L1 _src/diagonal.py, _src/full_rank.py, _src/low_rank.py, _src/types.py
+#   L2 _src/wrappers.py, _src/posterior.py
+
+"layer:0-primitives":
+  - changed-files:
+    - any-glob-to-any-file:
+      - "src/optax_bayes/_src/primitives.py"
+      - "src/optax_bayes/_src/hessians.py"
+      - "src/optax_bayes/_src/conversions.py"
+
+"layer:1-components":
+  - changed-files:
+    - any-glob-to-any-file:
+      - "src/optax_bayes/_src/diagonal.py"
+      - "src/optax_bayes/_src/full_rank.py"
+      - "src/optax_bayes/_src/low_rank.py"
+      - "src/optax_bayes/_src/types.py"
+
+"layer:2-models":
+  - changed-files:
+    - any-glob-to-any-file:
+      - "src/optax_bayes/_src/wrappers.py"
+      - "src/optax_bayes/_src/posterior.py"
+
+# --- Default / Dependabot compatibility ------------------------------------
 
 "dependencies":
   - changed-files:
     - any-glob-to-any-file:
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
-
-"documentation":
-  - changed-files:
-    - any-glob-to-any-file:
-      - "docs/**"
-      - "mkdocs.yml"
-      - "*.md"
-
-"testing":
-  - changed-files:
-    - any-glob-to-any-file: "tests/**"
-
-"source":
-  - changed-files:
-    - any-glob-to-any-file: "src/**"
+      - "uv.lock"
