@@ -1,5 +1,5 @@
 # =============================================================================
-# pypackage_template Makefile
+# optax_bayes Makefile
 # =============================================================================
 #
 # PREREQUISITES:
@@ -36,7 +36,7 @@ PKG_VERSION := $(shell grep -E '^version\s*=' pyproject.toml 2>/dev/null \
 # ---------------------------------------------------------------------------
 # Paths (override via .env or command line)
 # ---------------------------------------------------------------------------
-PKGROOT ?= src/mypackage
+PKGROOT ?= src/optax_bayes
 
 # ---------------------------------------------------------------------------
 # ANSI colours
@@ -72,7 +72,7 @@ check-env-%:
 # ===========================================================================
 
 help: ## 📚 Show this help menu
-	@printf "$(YELLOW)🐍 pypackage_template$(RESET)\n"
+	@printf "$(YELLOW)🐍 optax_bayes$(RESET)\n"
 	@printf "%s\n" "-----------------------------------------------------------"
 	@awk 'BEGIN {FS = ":.*##"; printf ""} \
 	     /^[a-zA-Z_-]+:.*?##/ { printf "  $(BLUE)%-18s$(RESET) %s\n", $$1, $$2 } \

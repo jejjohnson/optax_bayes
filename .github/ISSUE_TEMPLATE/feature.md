@@ -44,30 +44,56 @@ Delete this section if not relevant.
 ```
 
 <!--
-OPTIONAL — Inline math / numerical context ("Mathematical Notes")
-For algorithmic / numerical issues: inline equations, sign conventions,
-numerical-stability notes, edge cases. Keep everything the implementer
-needs in one place.
+REQUIRED FOR ALGORITHMIC / NUMERICAL ISSUES — Inline math / numerical
+context ("Mathematical Notes")
 
-STYLE — prefer unicode math in prose (σ², E₁, ∑, ⊗, ≈, Λ⁻¹, O(d³)) so
-the issue reads in the GH UI and plain-text tools. Reach for a `text`
-code fence for multi-line equation blocks so syntax-highlighting doesn't
-try to parse pseudo-math:
+If the issue implements an algorithm, numerical method, probabilistic
+update, optimizer, filter, solver, linearization, approximation, or any
+other mathematically-defined behavior, DO NOT delete this section.
 
-    ```text
-    s_next   = (1 - ρ) * s   + ρ * (s₀   - h)
-    η_next   = (1 - ρ) * η   + ρ * (η₀ + g - h * m)
-    ```
+Treat this section as part of the spec, not optional commentary. Include
+as much math as another implementer needs to succeed without opening the
+private design docs or re-deriving the method from scratch.
+
+Minimum content for algorithmic issues:
+  - defining equations
+  - parameterization / sign conventions
+  - approximation being used
+  - identities or invariants the tests should pin down
+  - numerical-stability notes or edge cases
+
+Examples of the level of detail we want:
+  - "K_post⁻¹ = K_prior⁻¹ + Λ_sites"
+  - "η₂ = -½Λ"
+  - "f_post = f_prior + K_fy (K_yy + R)⁻¹ (y - y_prior)"
+  - "A ≈ Q_k Λ_k Q_kᵀ,  R = Q_k Λ_k^{1/2}"
+
+STYLE — use normal GitHub math syntax:
+  - inline math: `$...$`
+  - display math: `$$...$$`
+
+Prefer real math notation over vague prose whenever the algorithm is
+defined mathematically. If plain-text readability matters, unicode math
+in prose (σ², E₁, ∑, ⊗, ≈, Λ⁻¹, O(d³)) is also encouraged.
 
 Rename the heading if the content type warrants (e.g. "Numerical Notes",
-"Stability Notes", "Equations To Test"). Delete if not relevant.
+"Stability Notes", "Equations To Test"). Delete only when the issue is
+truly non-algorithmic.
 -->
 
 ## Mathematical Notes
 <!-- Delete or rename. -->
-```text
-<equations, conventions, numerical considerations>
-```
+Use this section as the implementation spec for algorithms.
+
+Suggested prompts:
+- Defining equations:
+  $$ ... $$
+- Parameterization / sign conventions:
+  $$ ... $$
+- Approximation / factorization used:
+  $$ ... $$
+- Identities or invariants tests should assert:
+  $$ ... $$
 
 ## References & Existing Code
 - Design doc / spec: `<path or URL>`
@@ -99,6 +125,29 @@ Rename the heading if the content type warrants (e.g. "Numerical Notes",
 - [ ] Docstrings (covered by Definition of Done)
 
 ## Relationships
+<!--
+Each prose line below has a native GitHub feature you should also apply
+after the issue is opened. Keep the prose as a human-readable record AND
+apply the native link so GitHub's UI (sub-issue panel, dependency graph,
+"unblocks on close") works.
+
+  Parent:      → Sub-issue link. UI: Issue side-panel → Sub-issues →
+                 "Create sub-issue" on the parent, or "Convert to
+                 sub-issue" on the child.
+                 CLI: make gh-sub PARENT=<parent#> CHILDREN="<this#>"
+
+  Blocked by:  → Typed dependency. UI: side-panel → Development →
+                 "Mark as blocked by".
+                 CLI: make gh-block ISSUE=<this#> BLOCKED_BY=<other#>
+
+  Blocks:      → Inverse of Blocked by; apply on the OTHER issue.
+                 CLI: make gh-block ISSUE=<other#> BLOCKED_BY=<this#>
+
+  Related:     → No native feature; mention only.
+
+For bulk / scripted linking see `.github/scripts/link-issues.sh` or the
+`link-gh-issues` Claude Code skill (.claude/commands/link-gh-issues.md).
+-->
 - Parent (theme epic): #
 - Blocked by: #
 - Blocks: #

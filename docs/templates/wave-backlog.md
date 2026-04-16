@@ -25,8 +25,14 @@ How to use:
      with the assigned GitHub issue numbers to keep the record.
 
 Conventions:
-  - Use unicode math in prose (σ², ∑, Λ⁻¹, O(d³)) and `text`-tagged
-    code fences for multi-line equations.
+  - For algorithmic / numerical issues, math is part of the spec, not
+    decoration. Include the equations another implementer will need:
+    update rules, factorization identities, sign conventions,
+    approximations, and invariants to test.
+  - Use normal GitHub math syntax for issue-ready drafts:
+    inline `$...$`, display `$$...$$`.
+  - Unicode math in prose (σ², ∑, Λ⁻¹, O(d³)) is also encouraged when
+    it improves readability in plain text.
   - Delete sections that don't apply. Every header below is optional
     except Wave Goal, one Theme Epic, and one child issue.
   - Rename headings to fit the content (see .github/ISSUE_TEMPLATE/
@@ -203,8 +209,21 @@ etc.). Delete if not needed.
 
 ## Mathematical Notes
 <!--
-Issue-specific equations. Prefer unicode math in prose; use a
-```text code fence for multi-line equations. Delete if N/A.
+Issue-specific equations. For algorithmic issues this section should be
+treated as REQUIRED and should carry enough math that another agent can
+implement the issue without reopening the design docs.
+
+Recommended contents:
+- defining equations
+- parameterization / sign conventions
+- approximation / factorization used
+- identities or invariants tests should pin down
+
+Use GitHub math:
+- inline: `$...$`
+- display: `$$...$$`
+
+Delete only if the issue is truly non-algorithmic.
 -->
 
 ## Implementation Notes
@@ -308,5 +327,15 @@ When the draft is ready to become real GitHub issues:
 - [ ] Update cross-references (`Parent epic`, `Blocked by`, `Blocks`,
       `Related`) from draft IDs to GH numbers so relationships survive
       in the GH UI.
+- [ ] **Apply native relationships.** The prose `Parent:` / `Blocked
+      by:` / `Blocks:` lines are the human-readable record; they also
+      need the native GitHub sub-issue and dependency links so the UI
+      and automation pick up the hierarchy.
+      - Sub-issues (wave → themes → features):
+        `make gh-sub PARENT=<parent#> CHILDREN="<child1#> <child2#> ..."`
+      - Blocked-by:
+        `make gh-block ISSUE=<this#> BLOCKED_BY=<other#>`
+      - For bulk application, see `.github/scripts/link-issues.sh` or
+        the `link-gh-issues` Claude Code skill.
 - [ ] Either delete this file or keep it as historical record in
       `.plans/archive/`.

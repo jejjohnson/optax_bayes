@@ -1,13 +1,13 @@
 [project]
-name = "mypackage"
-version = "0.1.5"
-description = "My short description for my project."
+name = "optax_bayes"
+version = "0.0.1"
+description = "The Bayesian Learning Rule as optax GradientTransformations."
 authors = [
     {name="J. Emmanuel Johnson", email="jemanjohnson34@gmail.com"},
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
-keywords = []
+keywords = ["bayesian", "optax", "jax", "variational-inference", "natural-gradient"]
 requires-python = ">=3.12"
 classifiers = [
     "Topic :: Scientific/Engineering",
@@ -22,7 +22,8 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Repository = "https://github.com/jejjohnson/mypackage"
+Repository = "https://github.com/jejjohnson/optax_bayes"
+Documentation = "https://jejjohnson.github.io/optax_bayes"
 
 [dependency-groups]
 dev = [
@@ -34,15 +35,25 @@ lint = [
     "ruff>=0.15.10",
 ]
 typecheck = [
-    "ty>=0.0.29",
+    "ty>=0.0.30",
 ]
 docs = [
     "mkdocs>=1.6.1",
-    "mkdocs-material>=9.5",
-    "mkdocstrings[python]>=0.25",
-    "mkdocs-jupyter>=0.24",
-    "jupytext>=1.16",
-    "ipykernel>=6.29",
+    "mkdocs-material>=9.7.6",
+    "mkdocstrings[python]>=1.0.3",
+    "mkdocs-jupyter>=0.26.2",
+    "jupytext>=1.19.1",
+    "ipykernel>=7.2.0",
+    # matplotlib + watermark used by the example notebooks during local
+    # re-execution. The guarded watermark cell in each notebook no-ops
+    # if the package is missing, but installing it here lets the version
+    # readout actually print under `nbconvert --execute`.
+    "matplotlib>=3.8",
+    "watermark>=2.4",
+    # pygments 2.20.0 dropped the None -> '' coercion for HtmlFormatter(filename=...),
+    # but pymdownx.highlight 10.21.x still passes the untitled-code-block title
+    # through as None. Pin until a fixed pymdown-extensions release ships.
+    "pygments>=2.19,<2.20",
 ]
 
 [build-system]
@@ -50,11 +61,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mypackage"]
+packages = ["src/optax_bayes"]
 
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+extend-exclude = ["design_docs"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
@@ -69,10 +81,10 @@ python-version = "3.12"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src/mypackage --cov-report=term-missing --cov-report=xml:coverage.xml"
+addopts = "--cov=src/optax_bayes --cov-report=term-missing --cov-report=xml:coverage.xml"
 
 [tool.coverage.run]
-source = ["src/mypackage"]
+source = ["src/optax_bayes"]
 omit = ["tests/*"]
 
 [tool.coverage.report]

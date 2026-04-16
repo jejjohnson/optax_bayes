@@ -34,6 +34,10 @@ One section per theme. Sections can run in parallel unless noted.
 
 Rename to "Canonical Epics" if you prefer that wording — matches the
 wave-backlog drafting convention in docs/templates/wave-backlog.md.
+
+After the wave epic is opened, each theme epic listed below should also
+be linked as a SUB-ISSUE of this wave. One-shot:
+    make gh-sub PARENT=<this#> CHILDREN="<theme1#> <theme2#> <theme3#>"
 -->
 
 
@@ -53,6 +57,14 @@ wave-backlog drafting convention in docs/templates/wave-backlog.md.
 - [ ] Docs published
 
 ## Relationships
+<!--
+After opening, apply native links:
+  Sub-issues:  each Theme epic above becomes a sub-issue of this wave
+               (make gh-sub PARENT=<this#> CHILDREN="<theme#> <theme#>")
+  Blocked by:  make gh-block ISSUE=<this#> BLOCKED_BY=<prior-wave#>
+  Blocks:      make gh-block ISSUE=<next-wave#> BLOCKED_BY=<this#>
+Helper: `.github/scripts/link-issues.sh` or the `link-gh-issues` skill.
+-->
 - Blocked by: #
 - Blocks: #
 - Related: #

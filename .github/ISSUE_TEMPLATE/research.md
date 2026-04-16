@@ -176,6 +176,19 @@ missing pieces. Delete if not useful.
 - <paper / repo / doc> — `<url>`
 
 ## Relationships
+<!--
+Apply native GitHub links after the issue is opened.
+
+  Parent:      → Sub-issue link (research issue nested under a theme epic).
+                 make gh-sub PARENT=<parent#> CHILDREN="<this#>"
+  Blocks:      → Each follow-up issue from §5 should reference THIS research
+                 issue as its blocker. From the follow-up:
+                 make gh-block ISSUE=<follow-up#> BLOCKED_BY=<this#>
+  Blocked by:  → make gh-block ISSUE=<this#> BLOCKED_BY=<other#>
+  Related:     → Prose only; no native feature.
+
+Helper: `.github/scripts/link-issues.sh` or the `link-gh-issues` skill.
+-->
 - Parent (theme epic, if any): #
 - Blocked by: #
 - Blocks (follow-up issues from §5 reference this as parent research): #

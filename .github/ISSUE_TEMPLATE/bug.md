@@ -48,6 +48,13 @@ labels: ["type:bug"]
 - [ ] N/A, or: update `<path>`
 
 ## Relationships
+<!--
+Apply the native GitHub links after the issue is opened:
+  Parent:      make gh-sub PARENT=<parent#> CHILDREN="<this#>"
+  Blocked by:  make gh-block ISSUE=<this#> BLOCKED_BY=<other#>
+  Blocks:      make gh-block ISSUE=<other#> BLOCKED_BY=<this#>
+Helper: `.github/scripts/link-issues.sh` or the `link-gh-issues` skill.
+-->
 - Parent (theme epic, if any): #
 - Blocked by: #
 - Blocks: #

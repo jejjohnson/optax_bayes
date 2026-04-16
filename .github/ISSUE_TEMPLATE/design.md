@@ -95,6 +95,19 @@ Rename if the content warrants ("Numerical Considerations",
 - [ ] Docstring notes referencing the decision
 
 ## Relationships
+<!--
+Each prose line has a native GitHub feature — apply it after the issue
+is opened so GitHub's UI and automation pick up the hierarchy.
+
+  Parent:      → Sub-issue link.  make gh-sub PARENT=<parent#> CHILDREN="<this#>"
+  Blocked by:  → Typed dependency.  make gh-block ISSUE=<this#> BLOCKED_BY=<other#>
+  Blocks:      → Inverse — apply on the OTHER issue.
+                 make gh-block ISSUE=<other#> BLOCKED_BY=<this#>
+  Related:     → Prose only; no native feature.
+
+Helper: `.github/scripts/link-issues.sh` or the `link-gh-issues` Claude
+Code skill.
+-->
 - Parent (theme epic): #
 - Blocked by: #
 - Blocks: # (issues that can't start until this decision resolves)
