@@ -66,6 +66,7 @@ packages = ["src/optax_bayes"]
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+extend-exclude = ["design_docs"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
