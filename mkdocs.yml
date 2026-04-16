@@ -45,6 +45,7 @@ nav:
   - Examples:
       - Demo: notebooks/example_demo.py
   - API Reference: api/reference.md
+  - Contributing: contributing.md
   - Changelog: CHANGELOG.md
 
 markdown_extensions:

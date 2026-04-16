@@ -329,15 +329,54 @@ Dependabot monitors both **GitHub Actions** versions and **Python (pip) dependen
 
 ### 🏷️ Auto PR Labeling — `.github/labeler.yml` + `label-pr.yml`
 
-File path patterns are mapped to labels automatically. For example:
+File path patterns are mapped to labels from the optax_bayes taxonomy (`area:*`, `layer:*`, `dependencies`). For example:
 
-- Changes in `src/` → `source` label
-- Changes in `.github/workflows/` → `ci` label
-- Changes in dependency files (e.g. `pyproject.toml`, `.pre-commit-config.yaml`) → `dependencies` label
+- Changes in `src/optax_bayes/_src/primitives.py`, `hessians.py`, `conversions.py` → `layer:0-primitives`
+- Changes in `src/optax_bayes/_src/diagonal.py`, `full_rank.py`, `low_rank.py` → `layer:1-components`
+- Changes in `src/optax_bayes/_src/wrappers.py`, `posterior.py` → `layer:2-models`
+- Changes in `tests/` → `area:testing`
+- Changes in `docs/`, `mkdocs.yml`, `*.md` → `area:docs`
+- Changes in dependency files → `dependencies`
 
 > **What:** Automatic label application on every PR based on which files changed — no manual labelling required.
 
 > **Why auto-labeling?** At-a-glance PR categorization in the GitHub UI with zero manual effort.
+
+---
+
+### 🧭 Issue Templates + Epic Hierarchy — `.github/ISSUE_TEMPLATE/`
+
+**Files:** `.github/ISSUE_TEMPLATE/*.md`, `.github/scripts/create-labels.sh`, `docs/contributing.md`, `docs/templates/wave-backlog.md`, `CONTRIBUTING.md`
+
+Six opinionated issue templates (plus a `config.yml`) enforce a two-layer epic model (**Wave → Theme → Issue**) and a consistent body format: Problem / User Story / Motivation / Proposed API / References / Implementation Steps / Definition of Done / Testing / Documentation / Relationships.
+
+| Template | Purpose |
+|---|---|
+| `Epic — Wave (L1)` | Release-scoped mega-epic; owns a milestone |
+| `Epic — Theme (L2)` | Parallel-safe group of issues under a wave |
+| `Feature / Enhancement` | One substantial deliverable |
+| `Design / ADR` | Resolves a design question for a new API |
+| `Bug report` | Something isn't working |
+| `Research / Comparative Analysis` | Study prior art and produce a prioritized roadmap of follow-up issues |
+
+The `Feature` and `Design` templates include two **optional** sections:
+
+- **Design Snapshot** — paste API sketches or excerpts from the private design docs in [`jej_vc_snippets/design_docs/optax_bayes/`](https://github.com/jejjohnson/jej_vc_snippets/tree/main/design_docs/optax_bayes) so the issue is self-contained. Renameable per issue type.
+- **Mathematical Notes** — BLR equations, sign conventions, numerical considerations. Use unicode math inline (σ², E₁, ∑, Λ⁻¹, O(d³)) and ` ```text ` code fences for multi-line equations.
+
+The companion label taxonomy is created by:
+
+```bash
+make gh-labels       # idempotent; edit .github/scripts/create-labels.sh to customise
+```
+
+For planning a whole wave of issues at once, copy [`docs/templates/wave-backlog.md`](docs/templates/wave-backlog.md) into `.plans/` and draft the wave as one reviewable file before opening GitHub issues. Suggested draft prefix: `OBX`. See [`docs/contributing.md`](docs/contributing.md) → "Drafting a wave backlog" for the workflow.
+
+See [`docs/contributing.md`](docs/contributing.md) (or [`CONTRIBUTING.md`](CONTRIBUTING.md) at the repo root) for the full taxonomy, three-layer stack, epic model, and conventions.
+
+> **What:** Six issue templates + a 23-label taxonomy + a `Wave → Theme → Issue` hierarchy + a wave-backlog drafting template under `docs/templates/`, all documented in `docs/contributing.md`.
+
+> **Why an epic model?** Consistent issue structure lets humans and AI agents collaborate on planning without renegotiating conventions each time. Templates encode the conventions; `make gh-labels` bootstraps them.
 
 ---
 
@@ -363,6 +402,7 @@ All common tasks are available via `make`:
 | `make docs` | Build documentation site |
 | `make docs-serve` | Preview documentation locally |
 | `make docs-deploy` | Deploy documentation to GitHub Pages |
+| `make gh-labels` | Bootstrap the GitHub label taxonomy (idempotent) |
 | `make version` | Display package version and git hash |
 
 The Makefile auto-loads `.env` and exports its variables. The `check-env-VARNAME` guard pattern lets targets declare required env vars as prerequisites.
