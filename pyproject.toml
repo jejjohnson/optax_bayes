@@ -1,6 +1,6 @@
 [project]
 name = "optax_bayes"
-version = "0.1.0"
+version = "0.0.1"
 description = "The Bayesian Learning Rule as optax GradientTransformations."
 authors = [
     {name="J. Emmanuel Johnson", email="jemanjohnson34@gmail.com"},
