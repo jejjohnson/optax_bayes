@@ -1,33 +1,56 @@
 ---
-applyTo: "docs/**/*.py,docs/**/*.md,notebooks/**/*.py"
+applyTo: "docs/**/*.ipynb,docs/**/*.py,docs/**/*.md,notebooks/**/*.ipynb"
 ---
 
 # Documentation Examples — Standards & Workflow
 
 ## Overview
 
-Example notebooks live in `docs/notebooks/` (or `notebooks/`) as **jupytext percent-format `.py` files**. They are the single source of truth for all figures, tables, and timing data shown in the documentation.
+Example notebooks live in `docs/notebooks/` as **executed `.ipynb` files**. The committed `.ipynb` carries both source cells and rendered cell outputs (including matplotlib figures as embedded PNGs). `mkdocs-jupyter` renders them with `execute: false`, so the committed outputs are what users see in the docs.
 
-**Execution model**: `mkdocs-jupyter` renders notebooks with `execute: false`. Authors run notebooks locally, save artifacts to `docs/images/`, and commit both the `.py` source and the generated PNGs.
+Every notebook is **Google Colab compatible** — the first cell detects Colab and `pip install`s the right dependencies so users can click "Open in Colab" and run end-to-end without touching the host environment.
 
 ## Directory Layout
 
 ```
 docs/
-├── images/
-│   └── {notebook_name}/      # one subdirectory per notebook
-│       ├── figure_one.png
-│       ├── convergence.png
-│       └── accuracy_timing.png
 ├── notebooks/
-│   ├── demo_foo.py            # jupytext percent-format
-│   └── benchmark_bar.py
-└── guide.md                   # markdown page embedding saved images
+│   ├── demo_foo.ipynb
+│   ├── tutorial_bar.ipynb
+│   └── ...
+└── api/
+    └── ...
 ```
 
-## Jupytext Header
+No separate `images/` directory — figures live inside the `.ipynb` cell outputs.
 
-Every notebook `.py` file must start with this header:
+## Authoring Workflow
+
+**Develop in jupytext percent format**, then convert and execute for the final commit. Plain `.py` diffs are vastly easier to review than raw `.ipynb` JSON, so do the substantive editing on the `.py` side.
+
+1. Create `docs/notebooks/foo.py` in jupytext percent format (header below).
+2. Iterate — edit, smoke-run via `uv run --group docs python docs/notebooks/foo.py`, repeat.
+3. When satisfied, convert to `.ipynb`:
+
+   ```bash
+   uv run --group docs jupytext --to notebook docs/notebooks/foo.py
+   ```
+
+4. Execute in place so cell outputs are embedded:
+
+   ```bash
+   uv run --group docs jupyter nbconvert --to notebook \
+     --execute docs/notebooks/foo.ipynb \
+     --inplace \
+     --ExecutePreprocessor.timeout=180
+   ```
+
+5. Delete the `.py` — the `.ipynb` is the committed source of truth.
+6. Commit the `.ipynb`. `mkdocs-jupyter` picks it up automatically.
+
+## Jupytext Header (dev only)
+
+While developing in `.py`, start the file with:
 
 ```python
 # ---
@@ -45,7 +68,7 @@ Every notebook `.py` file must start with this header:
 # ---
 ```
 
-## Cell Markers
+## Cell Markers (dev only)
 
 - **Code cells**: `# %%`
 - **Markdown cells**: `# %% [markdown]` followed by `#`-prefixed lines
@@ -60,66 +83,155 @@ Every notebook `.py` file must start with this header:
 import jax.numpy as jnp
 ```
 
+## First Markdown Cell — Title + Colab Badge
+
+Every notebook opens with a `#`-level title and a Colab badge pointing at its `main`-branch URL. Replace `OWNER/REPO` below with the actual GitHub owner and repository name (e.g. from `repo_url` in `mkdocs.yml`):
+
+```markdown
+# Demo — Feature Overview
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/OWNER/REPO/blob/main/docs/notebooks/demo_foo.ipynb)
+
+<one-paragraph summary>
+
+**What you'll learn:**
+
+1. ...
+2. ...
+3. ...
+```
+
+## First Code Cell — Colab Detection + Install
+
+Detect Colab, install the package only when needed (substitute `OWNER/REPO` with the actual GitHub owner and repository name):
+
+```python
+import subprocess
+import sys
+
+try:
+    import google.colab  # noqa: F401
+
+    IN_COLAB = True
+except ImportError:
+    IN_COLAB = False
+
+if IN_COLAB:
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "-q",
+            "optax_bayes @ git+https://github.com/OWNER/REPO@main",
+        ],
+        check=True,
+    )
+```
+
+Local / CI users with the environment set up skip the install and go straight to imports.
+
+## Imports + Warnings
+
+```python
+import warnings
+
+warnings.filterwarnings("ignore", message=r".*IProgress.*")
+
+import jax.numpy as jnp
+import matplotlib.pyplot as plt
+# ... other imports
+```
+
+- Suppress the IProgress warning from ipywidgets so the output is clean.
+
+## Reproducibility — `watermark`
+
+After imports, print a version readout. The cell uses `get_ipython()` and an `importlib.util.find_spec` check so a plain `python foo.py` smoke run during dev — and a local `nbconvert --execute` on a machine without `watermark` installed — both no-op cleanly instead of raising `UsageError: Line magic function %load_ext not found`:
+
+```python
+import importlib.util
+
+try:
+    from IPython import get_ipython
+
+    ipython = get_ipython()
+except ImportError:
+    ipython = None
+
+if ipython is not None and importlib.util.find_spec("watermark") is not None:
+    ipython.run_line_magic("load_ext", "watermark")
+    ipython.run_line_magic(
+        "watermark",
+        "-v -m -p jax,jaxlib,optax,optax_bayes",
+    )
+else:
+    print("watermark extension not installed; skipping reproducibility readout.")
+```
+
+The `[docs]` dependency group pulls in `watermark`, so under the documented authoring workflow (`uv run --group docs jupyter nbconvert --execute ...`) the readout actually prints. Users reproducing the notebook later see exactly which package versions generated the committed outputs.
+
 ## Notebook Structure
 
-Every example notebook should follow this order:
+1. **Title + Colab badge** (markdown)
+2. **Background** (markdown) — motivation, math, what the user will learn
+3. **Setup** — Colab detection + install
+4. **Imports + config + watermark**
+5. **Problem setup** — data, grids, initial conditions
+6. **Core demonstration(s)** — alternating markdown and code
+7. **Visualizations** — figures are embedded directly as cell outputs
+8. **Summary / takeaways**
 
-1. **Title & overview** (markdown) — what the notebook demonstrates, prerequisites
-2. **Imports & image directory setup** (code)
-3. **Problem setup** (markdown + code) — grid, parameters, initial conditions
-4. **Core computation** (markdown + code) — the actual demonstration
-5. **Figures & tables** (code) — generate, save, and display
-6. **Embedded images** (markdown) — reference the saved PNGs for static rendering
-7. **Summary / takeaways** (markdown)
+## Matplotlib Style
 
-## Image Directory Setup
+**Defaults only** — no `plt.style.use` and no `rcParams` tweaks:
 
-Always use `Path(__file__)` for portability. Create the directory eagerly:
+- `C0`, `C1`, `C2` (matplotlib defaults) for main series.
+- `"k--"` for truth / reference lines.
+- `figsize=(12, 5)` for single plots, `(18, 5)` for 1×3 comparison grids.
+- `ax.scatter(...)` for data points.
+- `ax.fill_between(..., alpha=0.2)` for uncertainty bands.
 
-```python
-from pathlib import Path
+## Markdown Paragraph Wrapping
 
-IMG_DIR = Path(__file__).resolve().parent.parent / "images" / "notebook_name"
-IMG_DIR.mkdir(parents=True, exist_ok=True)
-```
+**Each paragraph in a `# %% [markdown]` block must be a single long line.** Do not soft-wrap paragraph text across multiple `#` lines. jupytext preserves source newlines as soft breaks, which mkdocs-jupyter renders as awkward visual breaks.
 
-## Saving Figures
-
-Use a consistent `savefig` pattern — **always save before `plt.show()`**:
-
-```python
-fig.savefig(IMG_DIR / "descriptive_name.png", dpi=150, bbox_inches="tight")
-plt.show()
-```
-
-- **DPI**: 150 (good balance of quality and file size)
-- **`bbox_inches="tight"`**: prevents clipped labels
-- **Format**: PNG (committed to git)
-- **Naming**: lowercase, underscores, descriptive (e.g., `convergence.png`, `scheme_comparison.png`)
-
-## Embedding Images in Markdown Cells
-
-After every `savefig` code cell, add a markdown cell that embeds the image. This is what renders in the static docs (since `execute: false`):
+Right:
 
 ```python
 # %% [markdown]
-# ![Convergence rates](../images/notebook_name/convergence.png)
+# This notebook demonstrates the key features of the package. We walk through all the main patterns using a simple example so the only thing that differs is how the parameters are configured.
 ```
 
-The relative path `../images/` goes up from `docs/notebooks/` to `docs/`.
+Wrong:
 
-> **Note**: The path is relative to the source `.py` file location (`docs/notebooks/`), not the built site URL. One `../` is enough to reach `docs/images/`.
+```python
+# %% [markdown]
+# This notebook demonstrates the key features of the package. We walk
+# through all the main patterns using a simple example so the only
+# thing that differs is how the parameters are configured.
+```
 
-## Embedding Images in Standalone Markdown Pages
+Lines that *must* stay on their own (do not join):
 
-For dedicated documentation pages (e.g., `docs/guide.md`) that reference notebook-generated images:
+- Headings: `# # Title`, `# ## Section`
+- Display math: `# $$...$$` block (one expression per line)
+- Table rows: `# | col | col |`
+- List item heads: `# - item` or `# 1. item`
+- Code-fence delimiters: `# ``` ` and contents inside the fence
+- Blockquotes: `# > quote`
+
+## Math in Markdown Cells
+
+Inline: `$\|x - x'\|^2$`.
+Display:
 
 ```markdown
-!!! note "Reproducing these figures"
-    These figures are generated by the Example notebook (`notebooks/demo_foo.py`).
-
-![Descriptive alt text](images/notebook_name/figure.png)
+$$f(x) = \sum_{i=1}^{N} w_i \phi_i(x)$$
 ```
+
+MathJax is configured in `mkdocs.yml` — both inline and display math render in the docs.
 
 ## Timing & Benchmarks
 
@@ -144,45 +256,16 @@ Key rules:
 - **Always warm up** JIT-compiled functions before timing
 - **Use `block_until_ready()`** for JAX async dispatch
 - **Collect results into a dict/list**, then produce a summary figure or table at the end
-- **Save timing figures** alongside other images (e.g., `accuracy_timing.png`)
-
-## Tables & Statistics
-
-For comparison tables, print them in a code cell and also render as markdown:
-
-```python
-# %%
-# Print table for notebook execution
-for name, stats in results.items():
-    print(f"{name:20s}  time={stats['time_ms']:8.2f} ms  residual={stats['residual']:.2e}")
-
-# %% [markdown]
-# | Solver | Time (ms) | Residual |
-# |--------|-----------|----------|
-# | DST    | 0.42      | 1.2e-14  |
-# | CG     | 3.18      | 8.7e-11  |
-```
-
-When the table is generated programmatically during execution, the code cell output shows it. The markdown cell provides a static fallback for `execute: false` rendering. **Keep both in sync** after re-running.
-
-## Matplotlib Backend
-
-Use the non-interactive backend at the top of every notebook to avoid display issues in CI or headless environments:
-
-```python
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-```
 
 ## Checklist for New Notebooks
 
-- [ ] Jupytext header present
-- [ ] `IMG_DIR` setup with `Path(__file__)` and `mkdir`
-- [ ] `matplotlib.use("Agg")` before any `plt` import
-- [ ] Every figure saved with `savefig(..., dpi=150, bbox_inches="tight")`
-- [ ] Every saved figure followed by a markdown cell embedding it
-- [ ] Timing uses warm-up + `block_until_ready()` (if JAX)
-- [ ] Static markdown tables match printed output
-- [ ] Notebook listed in `mkdocs.yml` nav
-- [ ] Generated PNGs committed to `docs/images/{notebook_name}/`
+- [ ] Authored in jupytext `.py` percent format during development
+- [ ] First markdown cell: `#`-level title + Colab badge
+- [ ] Second markdown cell: background + math + "What you'll learn"
+- [ ] Setup cell: Colab detection + package install via `subprocess`
+- [ ] `warnings.filterwarnings(..., IProgress, ...)`
+- [ ] `%watermark` version readout
+- [ ] Matplotlib defaults only (no `style.use`, no `rcParams`)
+- [ ] Converted to `.ipynb` and executed in place
+- [ ] `.py` deleted; `.ipynb` with embedded outputs committed
+- [ ] Listed in `mkdocs.yml` nav

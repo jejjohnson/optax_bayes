@@ -43,7 +43,7 @@ plugins:
 nav:
   - Home: index.md
   - Examples:
-      - Demo: notebooks/example_demo.py
+      - Demo: notebooks/example_demo.ipynb
   - API Reference: api/reference.md
   - Changelog: CHANGELOG.md
 
