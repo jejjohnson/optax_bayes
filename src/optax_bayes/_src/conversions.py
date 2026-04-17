@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import jax
+import optax
 from jaxtyping import Array, Float
 
 
@@ -43,9 +44,9 @@ def mean_to_natural_diag(
 
 
 def natural_to_mean_diag_tree(
-    eta: dict,
-    s: dict,
-) -> tuple[dict, dict]:
+    eta: optax.Params,
+    s: optax.Params,
+) -> tuple[optax.Params, optax.Params]:
     """PyTree-aware natural-to-mean conversion.
 
     Args:

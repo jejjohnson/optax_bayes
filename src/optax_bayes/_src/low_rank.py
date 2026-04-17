@@ -12,6 +12,8 @@ Expects log-likelihood gradients.  Most users should use
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import gaussx
 import jax.numpy as jnp
 import lineax as lx
@@ -40,7 +42,7 @@ def _low_rank_solve(
     d_diag: jnp.ndarray,
     u: jnp.ndarray,
     b: jnp.ndarray,
-    solver: gaussx.AbstractSolverStrategy | None = None,
+    solver: lx.AbstractLinearSolver | None = None,
 ) -> jnp.ndarray:
     """Solve (diag(D) + U U^T) x = b via gaussx.
 
@@ -70,7 +72,7 @@ def _truncate_to_rank(u: jnp.ndarray, rank: int) -> jnp.ndarray:
     Returns:
         Truncated factor, shape (d, rank).
     """
-    p, s, _qt = jnp.linalg.svd(u, full_matrices=False)
+    p, s, _qt = jnp.linalg.svd(u, full_matrices=False)  # ty: ignore[invalid-argument-type, unknown-argument, not-iterable]
     return p[:, :rank] * s[None, :rank]
 
 
@@ -79,9 +81,9 @@ def blr_low_rank(
     rank: int = 10,
     prior_precision: float = 1e-4,
     prior_mean: jnp.ndarray | None = None,
-    hessian_estimator: str = "ggn",
+    hessian_estimator: str | Callable = "ggn",
     damping: float = 1e-6,
-    solver: gaussx.AbstractSolverStrategy | None = None,
+    solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
     """Low-rank Gaussian BLR as an optax transform.
 
@@ -116,8 +118,12 @@ def blr_low_rank(
 
     def init_fn(params: jnp.ndarray) -> BLRLowRankState:
         d = params.shape[0]
+        # Clamp rank to d: SVD of a (d, k) matrix returns at most d singular
+        # vectors, so a rank > d request would be silently truncated later
+        # and produce a shape mismatch.
+        effective_rank = min(rank, d)
         d0 = jnp.full(d, prior_precision)
-        u0 = jnp.zeros((d, rank))
+        u0 = jnp.zeros((d, effective_rank))
         m0 = jnp.zeros(d) if prior_mean is None else prior_mean
         eta_0 = d0 * m0
         return BLRLowRankState(
@@ -146,31 +152,37 @@ def blr_low_rank(
             solver=solver,
         )
 
-        # Hessian estimate (d, d) matrix
+        # Decompose -H as diag(-H) + off_diag(-H).  We put the diagonal
+        # into D (well-conditioned) and the off-diagonal into U (via the
+        # positive eigenvectors).  This O(d^3) eigendecomposition is a
+        # scalability bottleneck for large d; a rank-1 GGN-specific fast
+        # path could be added later but requires different numerics.
         h = _hessian_fn(m_t, grads)
+        h_m_t = h @ m_t
 
         # Diagonal precision update
         new_diag = (1 - rho) * state.diag_precision + rho * (d0 - jnp.diag(h))
         new_diag = jnp.maximum(new_diag, damping)
 
-        # Low-rank factor update:
-        # U_{new} U_{new}^T ≈ (1-rho) U U^T + rho * offdiag(-H)
+        # Low-rank factor update: extract positive eigenvectors of -H's
+        # off-diagonal part.
         neg_h = -h
         neg_h_offdiag = neg_h - jnp.diag(jnp.diag(neg_h))
-
         eigvals, eigvecs = jnp.linalg.eigh(neg_h_offdiag)
         pos_mask = eigvals > 0
         h_factor = eigvecs * jnp.sqrt(jnp.maximum(eigvals, 0.0))[None, :]
         h_factor = jnp.where(pos_mask[None, :], h_factor, 0.0)
 
+        # Low-rank factor update:
+        # U_{new} U_{new}^T ≈ (1-rho) U U^T + rho * h_factor @ h_factor^T
         u_scaled = jnp.sqrt(jnp.maximum(1 - rho, 0.0)) * state.low_rank_factor
         h_scaled = jnp.sqrt(rho) * h_factor
         u_aug = jnp.concatenate([u_scaled, h_scaled], axis=1)
 
-        new_u = _truncate_to_rank(u_aug, rank)
+        new_u = _truncate_to_rank(u_aug, min(rank, d))
 
         # Natural mean update
-        grad_mu1 = grads - h @ m_t
+        grad_mu1 = grads - h_m_t
         new_nat_mean = (1 - rho) * state.nat_mean + rho * (eta_0 + grad_mu1)
 
         # Recover new mean via gaussx structured solve
@@ -185,4 +197,4 @@ def blr_low_rank(
         )
         return updates, new_state
 
-    return optax.GradientTransformation(init_fn, update_fn)
+    return optax.GradientTransformation(init_fn, update_fn)  # ty: ignore[invalid-argument-type]

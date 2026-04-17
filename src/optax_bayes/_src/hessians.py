@@ -11,6 +11,8 @@ Full-rank estimators:
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float
@@ -92,7 +94,9 @@ def identity_hessian_full(
     return jnp.zeros((d, d), dtype=grads.dtype)
 
 
-def resolve_hessian_estimator_full(hessian_estimator):
+def resolve_hessian_estimator_full(
+    hessian_estimator: str | Callable,
+) -> Callable:
     """Resolve a full-rank hessian_estimator argument (Option C).
 
     Accepts a string selector or a callable:
@@ -112,6 +116,11 @@ def resolve_hessian_estimator_full(hessian_estimator):
     """
     if callable(hessian_estimator):
         return hessian_estimator
+    if not isinstance(hessian_estimator, str):
+        raise TypeError(
+            "hessian_estimator must be a string or callable, "
+            f"got {type(hessian_estimator).__name__}"
+        )
     if hessian_estimator == "ggn":
         return lambda mean, grads: ggn_outer(grads)
     if hessian_estimator == "identity":

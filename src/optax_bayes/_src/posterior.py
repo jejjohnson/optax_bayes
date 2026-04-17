@@ -6,6 +6,7 @@ import gaussx
 import jax
 import jax.numpy as jnp
 import lineax as lx
+import optax
 
 from optax_bayes._src.low_rank import _build_low_rank_operator
 from optax_bayes._src.types import BLRDiagState, BLRFullRankState, BLRLowRankState
@@ -13,7 +14,7 @@ from optax_bayes._src.types import BLRDiagState, BLRFullRankState, BLRLowRankSta
 
 def get_posterior_diagonal(
     state: BLRDiagState,
-) -> tuple[dict, dict]:
+) -> tuple[optax.Params, optax.Params]:
     """Extract the approximate posterior from diagonal BLR state.
 
     Returns the mean and variance of q(theta) = N(m, diag(v)) where:
@@ -37,7 +38,7 @@ def get_posterior_diagonal(
 
 def get_posterior_full_rank(
     state: BLRFullRankState,
-    solver: gaussx.AbstractSolverStrategy | None = None,
+    solver: lx.AbstractLinearSolver | None = None,
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
     """Extract the approximate posterior from full-rank BLR state.
 
@@ -47,13 +48,13 @@ def get_posterior_full_rank(
     Args:
         state: A ``BLRFullRankState`` from ``blr_full_rank`` or
             ``blr_full_rank_for_loss``.
-        solver: Optional ``gaussx`` solver strategy.
+        solver: Optional ``lineax`` solver (e.g. ``lx.AutoLinearSolver()``).
 
     Returns:
         Tuple ``(mean, covariance)`` where mean is (d,) and
         covariance is (d, d).
     """
-    op = lx.MatrixLinearOperator(state.precision)
+    op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)  # ty: ignore[invalid-assignment]
     mean = gaussx.solve(op, state.nat_mean, solver=solver)
     inv_op = gaussx.inv(op, solver=solver)
     covariance = inv_op.as_matrix()
@@ -62,7 +63,7 @@ def get_posterior_full_rank(
 
 def get_posterior_low_rank(
     state: BLRLowRankState,
-    solver: gaussx.AbstractSolverStrategy | None = None,
+    solver: lx.AbstractLinearSolver | None = None,
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
     """Extract the approximate posterior from low-rank BLR state.
 

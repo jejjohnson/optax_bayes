@@ -13,6 +13,8 @@ Expects log-likelihood gradients.  Most users should use
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import gaussx
 import jax.numpy as jnp
 import lineax as lx
@@ -26,9 +28,9 @@ def blr_full_rank(
     learning_rate: float = 1e-2,
     prior_precision: float = 1e-4,
     prior_mean: jnp.ndarray | None = None,
-    hessian_estimator: str = "ggn",
+    hessian_estimator: str | Callable = "ggn",
     damping: float = 1e-6,
-    solver: gaussx.AbstractSolverStrategy | None = None,
+    solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
     """Full-rank Gaussian BLR as an optax transform.
 
@@ -81,7 +83,7 @@ def blr_full_rank(
         eta_0 = lambda_0 @ m0
 
         # Current mean: m_t = Lambda_t^{-1} eta_t
-        op = lx.MatrixLinearOperator(state.precision)
+        op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)  # ty: ignore[invalid-assignment]
         m_t = gaussx.solve(op, state.nat_mean, solver=solver)
 
         # Hessian estimate
@@ -96,7 +98,7 @@ def blr_full_rank(
         new_nat_mean = (1 - rho) * state.nat_mean + rho * (eta_0 + grad_mu1)
 
         # Recover mean and compute update
-        new_op = lx.MatrixLinearOperator(new_precision)
+        new_op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(new_precision)  # ty: ignore[invalid-assignment]
         new_mean = gaussx.solve(new_op, new_nat_mean, solver=solver)
         updates = new_mean - m_t
 
@@ -107,4 +109,4 @@ def blr_full_rank(
         )
         return updates, new_state
 
-    return optax.GradientTransformation(init_fn, update_fn)
+    return optax.GradientTransformation(init_fn, update_fn)  # ty: ignore[invalid-argument-type]

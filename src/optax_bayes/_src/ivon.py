@@ -112,22 +112,26 @@ def ivon(
         if params is None:
             # Without params, skip weight decay on the mean
             updates = jax.tree.map(
-                lambda m, h: -learning_rate
-                * jnp.clip(
-                    m / debias / (h + weight_decay),
-                    -clip_radius,
-                    clip_radius,
+                lambda m, h: (
+                    -learning_rate
+                    * jnp.clip(
+                        m / debias / (h + weight_decay),
+                        -clip_radius,
+                        clip_radius,
+                    )
                 ),
                 new_momentum,
                 new_hess,
             )
         else:
             updates = jax.tree.map(
-                lambda m, h, p: -learning_rate
-                * jnp.clip(
-                    (m / debias + weight_decay * p) / (h + weight_decay),
-                    -clip_radius,
-                    clip_radius,
+                lambda m, h, p: (
+                    -learning_rate
+                    * jnp.clip(
+                        (m / debias + weight_decay * p) / (h + weight_decay),
+                        -clip_radius,
+                        clip_radius,
+                    )
                 ),
                 new_momentum,
                 new_hess,
@@ -141,7 +145,7 @@ def ivon(
         )
         return updates, new_state
 
-    return optax.GradientTransformation(init_fn, update_fn)
+    return optax.GradientTransformation(init_fn, update_fn)  # ty: ignore[invalid-argument-type]
 
 
 def sample_ivon(

@@ -88,20 +88,19 @@ from optax_bayes import blr_diagonal_for_loss, get_posterior_diagonal
 # %% [markdown]
 # ## Problem Setup
 #
-# We minimise a simple quadratic loss $L(\theta) = \frac{1}{2} \|\theta - \theta^*\|^2$ in 5 dimensions. This has a known analytic posterior under a Gaussian prior, so we can verify convergence exactly.
+# We minimise a simple quadratic loss $L(\theta) = \frac{1}{2} \|\theta - \theta^*\|^2$ in 5 dimensions.
 #
-# For prior precision $s_0$ and target $\theta^*$, the analytic posterior is $\mathcal{N}(m^*, v^* I)$ where $m^* = \theta^* / (1 + s_0)$ and $v^* = 1 / (1 + s_0)$.
+# With the exact Hessian $H = -I$, the analytic BLR fixed-point is $m^* = \theta^* / (1 + s_0)$ and $v^* = 1/(1 + s_0)$. The walkthrough below uses the default `hessian_estimator="ggn_diag"` (i.e. $h = -g^2$), which is a GGN approximation — it matches the mean well but the variance estimate differs from the exact posterior because $h \to 0$ near the optimum. We plot the GGN-BLR mean against the analytic value for reference; the variance estimate is expected to be looser.
 
 # %%
 d = 5
 theta_star = jnp.ones(d) * 3.0
 s0 = 1e-4
 
+# Analytic fixed-point assuming the exact Hessian (H = -I).
 analytic_m = theta_star / (1 + s0)
-analytic_v = 1.0 / (1.0 + s0)
 
-print(f"Analytic posterior mean:     {analytic_m[0]:.6f}")
-print(f"Analytic posterior variance: {analytic_v:.6f}")
+print(f"Analytic posterior mean (exact Hessian): {analytic_m[0]:.6f}")
 
 
 def loss_fn(theta):
@@ -136,7 +135,7 @@ for i in range(500):
 # Final posterior
 m_final, v_final = get_posterior_diagonal(state)
 print(f"Final mean[0]:     {m_final[0]:.6f}  (analytic: {analytic_m[0]:.6f})")
-print(f"Final variance[0]: {v_final[0]:.6f}  (analytic: {analytic_v:.6f})")
+print(f"Final variance[0]: {v_final[0]:.6f}  (GGN estimate)")
 
 # %% [markdown]
 # ## Convergence Plots
@@ -156,11 +155,10 @@ axes[1].set_ylabel("Mean (dim 0)")
 axes[1].set_title("Posterior Mean Convergence")
 axes[1].legend()
 
-axes[2].plot(history["step"], history["var_0"], label="BLR variance")
-axes[2].axhline(analytic_v, color="r", linestyle="--", label="Analytic")
+axes[2].plot(history["step"], history["var_0"], label="GGN variance")
 axes[2].set_xlabel("Step")
 axes[2].set_ylabel("Variance (dim 0)")
-axes[2].set_title("Posterior Variance Convergence")
+axes[2].set_title("Posterior Variance (GGN estimate)")
 axes[2].legend()
 
 plt.tight_layout()

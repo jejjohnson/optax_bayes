@@ -7,9 +7,11 @@ log-likelihood gradients as expected.
 
 from __future__ import annotations
 
-import gaussx
+from collections.abc import Callable
+
 import jax
 import jax.numpy as jnp
+import lineax as lx
 import optax
 
 from optax_bayes._src.diagonal import blr_diagonal
@@ -27,7 +29,7 @@ def _wrap_for_loss(inner: optax.GradientTransformation):
         neg_grads = jax.tree.map(jnp.negative, grads)
         return inner.update(neg_grads, state, params)
 
-    return optax.GradientTransformation(init_fn, update_fn)
+    return optax.GradientTransformation(init_fn, update_fn)  # ty: ignore[invalid-argument-type]
 
 
 def blr_diagonal_for_loss(
@@ -67,9 +69,9 @@ def blr_full_rank_for_loss(
     learning_rate: float = 1e-2,
     prior_precision: float = 1e-4,
     prior_mean: jnp.ndarray | None = None,
-    hessian_estimator: str = "ggn",
+    hessian_estimator: str | Callable = "ggn",
     damping: float = 1e-6,
-    solver: gaussx.AbstractSolverStrategy | None = None,
+    solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
     """Full-rank BLR accepting standard loss gradients.
 
@@ -81,7 +83,7 @@ def blr_full_rank_for_loss(
         prior_mean: Prior mean vector (d,), or None for zeros.
         hessian_estimator: ``"ggn"``, ``"identity"``, or callable.
         damping: Additive damping epsilon * I.
-        solver: Optional ``gaussx`` solver strategy.
+        solver: Optional ``lineax`` solver.
 
     Returns:
         An ``optax.GradientTransformation``.
@@ -103,9 +105,9 @@ def blr_low_rank_for_loss(
     rank: int = 10,
     prior_precision: float = 1e-4,
     prior_mean: jnp.ndarray | None = None,
-    hessian_estimator: str = "ggn",
+    hessian_estimator: str | Callable = "ggn",
     damping: float = 1e-6,
-    solver: gaussx.AbstractSolverStrategy | None = None,
+    solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
     """Low-rank BLR accepting standard loss gradients.
 
@@ -118,7 +120,7 @@ def blr_low_rank_for_loss(
         prior_mean: Prior mean vector (d,), or None for zeros.
         hessian_estimator: ``"ggn"``, ``"identity"``, or callable.
         damping: Additive damping on the diagonal.
-        solver: Optional ``gaussx`` solver strategy.
+        solver: Optional ``lineax`` solver.
 
     Returns:
         An ``optax.GradientTransformation``.

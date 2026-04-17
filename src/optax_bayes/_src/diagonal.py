@@ -105,4 +105,4 @@ def blr_diagonal(
         )
         return updates, new_state
 
-    return optax.GradientTransformation(init_fn, update_fn)
+    return optax.GradientTransformation(init_fn, update_fn)  # ty: ignore[invalid-argument-type]

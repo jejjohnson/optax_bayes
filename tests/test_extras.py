@@ -32,9 +32,7 @@ class TestSchedule:
             return 0.5 * jnp.sum((theta - theta_star) ** 2)
 
         # Constant schedule should behave like fixed lr
-        opt = blr_with_schedule(
-            optax.constant_schedule(0.1), prior_precision=1e-4
-        )
+        opt = blr_with_schedule(optax.constant_schedule(0.1), prior_precision=1e-4)
         theta = jnp.zeros(d)
         state = opt.init(theta)
 
@@ -124,9 +122,7 @@ class TestNewton:
         def loss_hessian(mean):
             return jnp.eye(d)
 
-        opt = newton_for_loss(
-            loss_hessian_fn=loss_hessian, damping=1e-6
-        )
+        opt = newton_for_loss(loss_hessian_fn=loss_hessian, damping=1e-6)
         theta = jnp.zeros(d)
         state = opt.init(theta)
 
@@ -153,9 +149,7 @@ class TestContinualLearning:
         def loss_1(theta):
             return 0.5 * jnp.sum((theta - theta_star_1) ** 2)
 
-        opt1 = blr_diagonal_for_loss(
-            learning_rate=0.1, prior_precision=1.0
-        )
+        opt1 = blr_diagonal_for_loss(learning_rate=0.1, prior_precision=1.0)
         theta = jnp.zeros(d)
         state1 = opt1.init(theta)
 
