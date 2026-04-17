@@ -69,7 +69,7 @@ class TestFullRankQuadratic:
         """Full-rank BLR with exact Hessian on a quadratic.
 
         For L(theta) = 0.5 * ||theta - theta*||^2:
-          H = -I (constant)
+          Loss Hessian = +I (constant)
           Analytic posterior: m* = theta*/(1+s0), Sigma* = I/(1+s0)
         """
         d = 3
@@ -79,11 +79,11 @@ class TestFullRankQuadratic:
         def loss_fn(theta):
             return 0.5 * jnp.sum((theta - theta_star) ** 2)
 
-        # Exact Hessian: always -I for this quadratic
+        # Loss Hessian (+I) — the _for_loss wrapper negates internally.
         opt = blr_full_rank_for_loss(
             learning_rate=0.1,
             prior_precision=s0,
-            hessian_estimator=lambda m, g: -jnp.eye(d),
+            hessian_estimator=lambda m, g: jnp.eye(d),
         )
         theta = jnp.zeros(d)
         state = opt.init(theta)
@@ -171,6 +171,44 @@ class TestFullRankQuadratic:
 
 
 class TestFullRankLossWrapper:
+    def test_callable_hessian_is_negated(self):
+        """A user-supplied loss-Hessian callable must be negated by the
+        _for_loss wrapper so the inner BLR core receives log-likelihood
+        Hessians (which are NSD)."""
+        d = 3
+        theta_star = jnp.array([1.0, -2.0, 3.0])
+
+        def loss_fn(theta):
+            return 0.5 * jnp.sum((theta - theta_star) ** 2)
+
+        # Loss Hessian is +I (PSD); log-lik Hessian is -I (NSD).
+        def loss_hessian(mean, grads):
+            return jnp.eye(d)
+
+        opt = blr_full_rank_for_loss(
+            learning_rate=0.1,
+            prior_precision=1.0,
+            hessian_estimator=loss_hessian,
+        )
+        theta = jnp.zeros(d)
+        state = opt.init(theta)
+
+        @jax.jit
+        def step(carry, _):
+            theta, state = carry
+            g = jax.grad(loss_fn)(theta)
+            updates, state = opt.update(g, state)
+            theta = optax.apply_updates(theta, updates)
+            return (theta, state), None
+
+        (theta, state), _ = jax.lax.scan(step, (theta, state), None, length=50)
+
+        # If the Hessian sign is wrong, precision becomes indefinite and
+        # the solve NaNs or the loss blows up.  With correct negation we
+        # converge to the MAP: m* = theta_star / (1 + s0)
+        assert jnp.all(jnp.isfinite(theta))
+        assert loss_fn(theta) < 0.5 * jnp.sum(theta_star**2)
+
     def test_sign_flip(self):
         params = jnp.array([1.0, 2.0])
         grads_loss = jnp.array([0.5, -0.3])

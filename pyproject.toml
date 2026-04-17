@@ -26,7 +26,7 @@ dependencies = [
     "jaxtyping>=0.2.34",
     "lineax>=0.1.0",
     "matfree>=0.0.5",
-    "gaussx @ git+https://github.com/jejjohnson/gaussx@fix/optional-numpyro",
+    "gaussx @ git+https://github.com/jejjohnson/gaussx@35ac47637ee810b939a1dce454841a5f34867291",
 ]
 
 [project.urls]

@@ -559,7 +559,7 @@ wheels = [
 [[package]]
 name = "gaussx"
 version = "0.0.10"
-source = { git = "https://github.com/jejjohnson/gaussx?rev=fix%2Foptional-numpyro#35ac47637ee810b939a1dce454841a5f34867291" }
+source = { git = "https://github.com/jejjohnson/gaussx?rev=35ac47637ee810b939a1dce454841a5f34867291#35ac47637ee810b939a1dce454841a5f34867291" }
 dependencies = [
     { name = "einops" },
     { name = "equinox" },
@@ -1518,7 +1518,7 @@ typecheck = [
 
 [package.metadata]
 requires-dist = [
-    { name = "gaussx", git = "https://github.com/jejjohnson/gaussx?rev=fix%2Foptional-numpyro" },
+    { name = "gaussx", git = "https://github.com/jejjohnson/gaussx?rev=35ac47637ee810b939a1dce454841a5f34867291" },
     { name = "jax", specifier = ">=0.4.35" },
     { name = "jaxlib", specifier = ">=0.4.35" },
     { name = "jaxtyping", specifier = ">=0.2.34" },

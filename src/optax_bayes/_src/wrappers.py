@@ -32,6 +32,20 @@ def _wrap_for_loss(inner: optax.GradientTransformation):
     return optax.GradientTransformation(init_fn, update_fn)  # ty: ignore[invalid-argument-type]
 
 
+def _negate_hessian_for_loss(
+    hessian_estimator: str | Callable,
+) -> str | Callable:
+    """If *hessian_estimator* is a callable returning a **loss** Hessian,
+    wrap it to return the log-likelihood Hessian (negated).  String
+    selectors are passed through unchanged because they are computed
+    from gradients internally (squared, so sign-invariant).
+    """
+    if callable(hessian_estimator):
+        user_fn = hessian_estimator
+        return lambda mean, grads: -user_fn(mean, grads)  # ty: ignore[call-top-callable]
+    return hessian_estimator
+
+
 def blr_diagonal_for_loss(
     learning_rate: float = 1e-2,
     prior_precision: float = 1e-4,
@@ -75,13 +89,16 @@ def blr_full_rank_for_loss(
 ) -> optax.GradientTransformation:
     """Full-rank BLR accepting standard loss gradients.
 
-    Internally negates gradients: ``g_loglik = -g_loss``.
+    Internally negates gradients (``g_loglik = -g_loss``) and, for
+    callable Hessian estimators, negates the returned matrix so the
+    inner BLR transform receives log-likelihood Hessians.
 
     Args:
         learning_rate: Step size rho in (0, 1].
         prior_precision: Scalar multiplied by I to form Lambda_0.
         prior_mean: Prior mean vector (d,), or None for zeros.
-        hessian_estimator: ``"ggn"``, ``"identity"``, or callable.
+        hessian_estimator: ``"ggn"``, ``"identity"``, or a callable
+            ``fn(mean, grads) -> (d, d)`` returning the **loss** Hessian.
         damping: Additive damping epsilon * I.
         solver: Optional ``lineax`` solver.
 
@@ -93,7 +110,7 @@ def blr_full_rank_for_loss(
             learning_rate=learning_rate,
             prior_precision=prior_precision,
             prior_mean=prior_mean,
-            hessian_estimator=hessian_estimator,
+            hessian_estimator=_negate_hessian_for_loss(hessian_estimator),
             damping=damping,
             solver=solver,
         )
@@ -111,14 +128,17 @@ def blr_low_rank_for_loss(
 ) -> optax.GradientTransformation:
     """Low-rank BLR accepting standard loss gradients.
 
-    Internally negates gradients: ``g_loglik = -g_loss``.
+    Internally negates gradients (``g_loglik = -g_loss``) and, for
+    callable Hessian estimators, negates the returned matrix so the
+    inner BLR transform receives log-likelihood Hessians.
 
     Args:
         learning_rate: Step size rho in (0, 1].
         rank: Target rank r of the low-rank factor U.
         prior_precision: Scalar diagonal prior precision.
         prior_mean: Prior mean vector (d,), or None for zeros.
-        hessian_estimator: ``"ggn"``, ``"identity"``, or callable.
+        hessian_estimator: ``"ggn"``, ``"identity"``, or a callable
+            ``fn(mean, grads) -> (d, d)`` returning the **loss** Hessian.
         damping: Additive damping on the diagonal.
         solver: Optional ``lineax`` solver.
 
@@ -131,7 +151,7 @@ def blr_low_rank_for_loss(
             rank=rank,
             prior_precision=prior_precision,
             prior_mean=prior_mean,
-            hessian_estimator=hessian_estimator,
+            hessian_estimator=_negate_hessian_for_loss(hessian_estimator),
             damping=damping,
             solver=solver,
         )
