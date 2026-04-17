@@ -43,7 +43,7 @@ plugins:
 nav:
   - Home: index.md
   - Examples:
-      - Demo: notebooks/example_demo.ipynb
+      - Diagonal BLR Walkthrough: notebooks/diagonal_blr_walkthrough.ipynb
   - API Reference: api/reference.md
   - Contributing: contributing.md
   - Changelog: CHANGELOG.md
