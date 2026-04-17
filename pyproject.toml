@@ -1,6 +1,6 @@
 [project]
 name = "optax_bayes"
-version = "0.0.1"
+version = "0.1.0"
 description = "The Bayesian Learning Rule as optax GradientTransformations."
 authors = [
     {name="J. Emmanuel Johnson", email="jemanjohnson34@gmail.com"},
@@ -19,7 +19,15 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Development Status :: 2 - Pre-Alpha",
 ]
-dependencies = []
+dependencies = [
+    "jax>=0.4.35",
+    "jaxlib>=0.4.35",
+    "optax>=0.2.4",
+    "jaxtyping>=0.2.34",
+    "lineax>=0.1.0",
+    "matfree>=0.0.5",
+    "gaussx @ git+https://github.com/jejjohnson/gaussx@fix/optional-numpyro",
+]
 
 [project.urls]
 Repository = "https://github.com/jejjohnson/optax_bayes"
@@ -60,6 +68,9 @@ docs = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/optax_bayes"]
 
@@ -71,6 +82,9 @@ extend-exclude = ["design_docs"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 ignore = ["E402", "E721", "E731", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"docs/notebooks/*.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
