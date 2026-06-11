@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.2](https://github.com/jejjohnson/optax_bayes/compare/v0.0.1...v0.0.2) (2026-06-11)
+
+
+### Features
+
+* implement Wave 1 diagonal, full-rank, low-rank BLR, IVON, and Newton ([#38](https://github.com/jejjohnson/optax_bayes/issues/38)) ([4c3caff](https://github.com/jejjohnson/optax_bayes/commit/4c3caff377a7c239ec4a3b91dd6c7fd09223c7bb))
+* revamp on gaussx 0.0.18 — init-at-params fix, optional gaussx extra, tiered tests, themed docs ([#44](https://github.com/jejjohnson/optax_bayes/issues/44)) ([b1d6840](https://github.com/jejjohnson/optax_bayes/commit/b1d6840c2ede8aa5920c00a3f187d9d361db2f59)), closes [#14](https://github.com/jejjohnson/optax_bayes/issues/14) [#17](https://github.com/jejjohnson/optax_bayes/issues/17)
+
 ## [0.1.5](https://github.com/jejjohnson/pypackage_template/compare/v0.1.4...v0.1.5) (2026-03-25)
 
 
