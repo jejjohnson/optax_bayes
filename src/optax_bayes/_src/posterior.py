@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import gaussx
 import jax
 import jax.numpy as jnp
 import lineax as lx
 import optax
 
+from optax_bayes._src._optional import require_gaussx
 from optax_bayes._src.low_rank import _build_low_rank_operator
 from optax_bayes._src.types import BLRDiagState, BLRFullRankState, BLRLowRankState
 
@@ -54,7 +54,8 @@ def get_posterior_full_rank(
         Tuple ``(mean, covariance)`` where mean is (d,) and
         covariance is (d, d).
     """
-    op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)  # ty: ignore[invalid-assignment]
+    gaussx = require_gaussx("get_posterior_full_rank")
+    op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)
     mean = gaussx.solve(op, state.nat_mean, solver=solver)
     inv_op = gaussx.inv(op, solver=solver)
     covariance = inv_op.as_matrix()
@@ -79,6 +80,7 @@ def get_posterior_low_rank(
         Tuple ``(mean, covariance)`` where mean is (d,) and
         covariance is (d, d).
     """
+    gaussx = require_gaussx("get_posterior_low_rank")
     op = _build_low_rank_operator(state.diag_precision, state.low_rank_factor)
     mean = gaussx.solve(op, state.nat_mean, solver=solver)
     inv_op = gaussx.inv(op, solver=solver)

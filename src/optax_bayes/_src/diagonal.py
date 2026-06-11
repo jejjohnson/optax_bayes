@@ -53,10 +53,11 @@ def blr_diagonal(
     _hessian_fn = ggn_diag if hessian_estimator == "ggn_diag" else identity_hessian
 
     def init_fn(params: optax.Params) -> BLRDiagState:
+        # The variational mean starts at the user's params (standard optax
+        # drop-in semantics): eta_0 = s_0 * params, so m_0 = params.  The
+        # prior mean still anchors every update through eta0 below.
         precision = jax.tree.map(lambda p: jnp.full_like(p, prior_precision), params)
-        nat_mean = jax.tree.map(
-            lambda p: jnp.full_like(p, prior_precision * prior_mean), params
-        )
+        nat_mean = jax.tree.map(lambda p: prior_precision * p, params)
         return BLRDiagState(
             precision=precision,
             nat_mean=nat_mean,

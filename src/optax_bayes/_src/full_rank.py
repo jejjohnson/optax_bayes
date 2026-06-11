@@ -15,11 +15,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-import gaussx
 import jax.numpy as jnp
 import lineax as lx
 import optax
 
+from optax_bayes._src._optional import require_gaussx
 from optax_bayes._src.hessians import resolve_hessian_estimator_full
 from optax_bayes._src.types import BLRFullRankState
 
@@ -59,15 +59,18 @@ def blr_full_rank(
     Returns:
         An ``optax.GradientTransformation``.
     """
+    gaussx = require_gaussx("blr_full_rank")
     _hessian_fn = resolve_hessian_estimator_full(hessian_estimator)
 
     def init_fn(params: jnp.ndarray) -> BLRFullRankState:
         d = params.shape[0]
         lambda_0 = prior_precision * jnp.eye(d)
-        m0 = jnp.zeros(d) if prior_mean is None else prior_mean
+        # The variational mean starts at the user's params (standard optax
+        # drop-in semantics).  The prior mean still anchors every update
+        # through eta_0 inside update_fn.
         return BLRFullRankState(
             precision=lambda_0,
-            nat_mean=lambda_0 @ m0,
+            nat_mean=lambda_0 @ params,
             count=jnp.zeros([], jnp.int32),
         )
 
@@ -83,7 +86,7 @@ def blr_full_rank(
         eta_0 = lambda_0 @ m0
 
         # Current mean: m_t = Lambda_t^{-1} eta_t
-        op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)  # ty: ignore[invalid-assignment]
+        op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)
         m_t = gaussx.solve(op, state.nat_mean, solver=solver)
 
         # Hessian estimate
@@ -98,7 +101,7 @@ def blr_full_rank(
         new_nat_mean = (1 - rho) * state.nat_mean + rho * (eta_0 + grad_mu1)
 
         # Recover mean and compute update
-        new_op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(new_precision)  # ty: ignore[invalid-assignment]
+        new_op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(new_precision)
         new_mean = gaussx.solve(new_op, new_nat_mean, solver=solver)
         updates = new_mean - m_t
 

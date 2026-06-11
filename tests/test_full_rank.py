@@ -35,13 +35,15 @@ class TestFullRankInit:
         state = opt.init(params)
         assert jnp.allclose(state.precision, 2.0 * jnp.eye(3))
 
-    def test_prior_mean(self):
-        params = jnp.zeros(3)
-        m0 = jnp.array([1.0, 2.0, 3.0])
+    def test_initial_mean_is_params(self):
+        # Standard optax drop-in semantics: the variational mean starts
+        # at the params passed to init; prior_mean only anchors updates.
+        params = jnp.array([1.0, 2.0, 3.0])
+        m0 = jnp.array([-1.0, 0.0, 1.0])
         opt = blr_full_rank(prior_precision=1.0, prior_mean=m0)
         state = opt.init(params)
-        # eta_0 = Lambda_0 @ m0 = I @ m0 = m0
-        assert jnp.allclose(state.nat_mean, m0)
+        # eta_0 = Lambda_0 @ params = I @ params
+        assert jnp.allclose(state.nat_mean, params)
 
 
 # ── Invalid estimator ────────────────────────────────────────────

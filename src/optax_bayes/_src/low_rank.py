@@ -14,11 +14,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-import gaussx
 import jax.numpy as jnp
 import lineax as lx
 import optax
 
+from optax_bayes._src._optional import require_gaussx
 from optax_bayes._src.hessians import resolve_hessian_estimator_full
 from optax_bayes._src.types import BLRLowRankState
 
@@ -35,6 +35,7 @@ def _build_low_rank_operator(
     Returns:
         A ``gaussx.LowRankUpdate`` operator.
     """
+    gaussx = require_gaussx("low-rank BLR operators")
     return gaussx.low_rank_plus_diag(d_diag, u)
 
 
@@ -55,6 +56,7 @@ def _low_rank_solve(
     Returns:
         Solution x, shape (d,).
     """
+    gaussx = require_gaussx("low-rank BLR solves")
     op = _build_low_rank_operator(d_diag, u)
     return gaussx.solve(op, b, solver=solver)
 
@@ -114,6 +116,7 @@ def blr_low_rank(
     Returns:
         An ``optax.GradientTransformation``.
     """
+    require_gaussx("blr_low_rank")
     _hessian_fn = resolve_hessian_estimator_full(hessian_estimator)
 
     def init_fn(params: jnp.ndarray) -> BLRLowRankState:
@@ -124,8 +127,10 @@ def blr_low_rank(
         effective_rank = min(rank, d)
         d0 = jnp.full(d, prior_precision)
         u0 = jnp.zeros((d, effective_rank))
-        m0 = jnp.zeros(d) if prior_mean is None else prior_mean
-        eta_0 = d0 * m0
+        # The variational mean starts at the user's params (standard optax
+        # drop-in semantics).  The prior mean still anchors every update
+        # through eta_0 inside update_fn.
+        eta_0 = d0 * params
         return BLRLowRankState(
             diag_precision=d0,
             low_rank_factor=u0,

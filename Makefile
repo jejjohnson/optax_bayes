@@ -61,7 +61,7 @@ check-env-%:
 # ---------------------------------------------------------------------------
 # Phony declarations
 # ---------------------------------------------------------------------------
-.PHONY: help install lint format typecheck test test-cov \
+.PHONY: help install lint format typecheck test test-fast test-slow test-cov \
         precommit build clean version docs docs-serve docs-deploy \
         gh-labels
 
@@ -128,14 +128,24 @@ typecheck: ## 🔬 Type-check with ty
 ##@ Testing
 # ===========================================================================
 
-test: ## 🧪 Run tests with pytest (no coverage)
+test: ## 🧪 Run tests in parallel with pytest (no coverage)
 	@printf "$(YELLOW)>>> Running tests (no coverage)...$(RESET)\n"
-	uv run pytest -v -o addopts=
+	uv run pytest -v -n auto
 	@printf "$(GREEN)>>> ✅ Tests passed!$(RESET)\n"
 
-test-cov: ## 📊 Run tests with coverage report
+test-fast: ## ⚡ Run fast unit tests (skips slow + integration; matches PR CI)
+	@printf "$(YELLOW)>>> Running fast tests...$(RESET)\n"
+	uv run pytest -v -n auto -m "not slow and not integration"
+	@printf "$(GREEN)>>> ✅ Fast tests passed!$(RESET)\n"
+
+test-slow: ## 🐢 Run only the slow + integration tests
+	@printf "$(YELLOW)>>> Running slow/integration tests...$(RESET)\n"
+	uv run pytest -v -n auto -m "slow or integration"
+	@printf "$(GREEN)>>> ✅ Slow/integration tests passed!$(RESET)\n"
+
+test-cov: ## 📊 Run tests with coverage report (parallel)
 	@printf "$(YELLOW)>>> Running tests with coverage...$(RESET)\n"
-	uv run pytest -v
+	uv run pytest -v -n auto --cov=src/optax_bayes --cov-report=term-missing --cov-report=xml:coverage.xml
 	@printf "$(GREEN)>>> ✅ Coverage report generated!$(RESET)\n"
 
 # ===========================================================================

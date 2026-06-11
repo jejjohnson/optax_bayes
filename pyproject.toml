@@ -24,9 +24,21 @@ dependencies = [
     "jaxlib>=0.4.35",
     "optax>=0.2.4",
     "jaxtyping>=0.2.34",
-    "lineax>=0.1.0",
-    "matfree>=0.0.5",
-    "gaussx @ git+https://github.com/jejjohnson/gaussx@35ac47637ee810b939a1dce454841a5f34867291",
+    "lineax>=0.1.1",
+]
+
+[project.optional-dependencies]
+# Structured linear-algebra backend for the full-rank and low-rank
+# transforms. The diagonal and IVON surface works without it.
+gaussx = [
+    "gaussx @ git+https://github.com/jejjohnson/gaussx@cd6264c92d32f433515d3efb06a0672a02280339",
+]
+equinox = [
+    "equinox>=0.11",
+]
+all = [
+    "gaussx @ git+https://github.com/jejjohnson/gaussx@cd6264c92d32f433515d3efb06a0672a02280339",
+    "equinox>=0.11",
 ]
 
 [project.urls]
@@ -37,7 +49,10 @@ Documentation = "https://jejjohnson.github.io/optax_bayes"
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
+    "pytest-xdist>=3.6.1",
     "pre-commit>=4.5.1",
+    # Tests exercise the full-rank / low-rank gaussx-backed paths.
+    "gaussx @ git+https://github.com/jejjohnson/gaussx@cd6264c92d32f433515d3efb06a0672a02280339",
 ]
 lint = [
     "ruff>=0.15.10",
@@ -95,7 +110,10 @@ python-version = "3.12"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src/optax_bayes --cov-report=term-missing --cov-report=xml:coverage.xml"
+markers = [
+    "slow: individually expensive tests (>~1.5s: heavy numerics, jit+grad+vmap sweeps)",
+    "integration: end-to-end workflows (posterior recovery fits, long training loops)",
+]
 
 [tool.coverage.run]
 source = ["src/optax_bayes"]
