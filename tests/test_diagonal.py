@@ -41,8 +41,15 @@ class TestInitState:
         opt = blr_diagonal(prior_precision=2.0, prior_mean=1.0)
         state = opt.init(params)
         assert jnp.allclose(state.precision, jnp.full(3, 2.0))
-        # eta0 = s0 * m0 = 2.0 * 1.0 = 2.0
-        assert jnp.allclose(state.nat_mean, jnp.full(3, 2.0))
+
+    def test_initial_mean_is_params(self):
+        # Standard optax drop-in semantics: the variational mean starts
+        # at the params passed to init, not at the prior mean.
+        params = jnp.array([1.0, -2.0, 0.5])
+        opt = blr_diagonal(prior_precision=2.0, prior_mean=1.0)
+        state = opt.init(params)
+        # eta_0 = s_0 * params  =>  m_0 = eta_0 / s_0 = params
+        assert jnp.allclose(state.nat_mean / state.precision, params)
 
 
 # ── Invalid estimator ────────────────────────────────────────────

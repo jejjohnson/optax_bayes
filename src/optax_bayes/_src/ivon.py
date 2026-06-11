@@ -154,11 +154,18 @@ def sample_ivon(
     key: jax.Array,
     weight_decay: float = 1e-4,
 ) -> optax.Params:
-    """Draw a reparameterised posterior sample from IVON state.
+    r"""Draw a reparameterised posterior sample from IVON state.
 
-    Samples theta ~ N(params, diag(1 / (hess + weight_decay))) via:
-      theta = params + eps / sqrt(hess + weight_decay)
+    Samples
+    $\theta \sim \mathcal{N}(\text{params},\
+    \operatorname{diag}(1 / (h + \lambda)))$ via
 
+    $$
+    \theta = \text{params} + \epsilon / \sqrt{h + \lambda},
+    \qquad \epsilon \sim \mathcal{N}(0, I),
+    $$
+
+    where $h$ is the Hessian estimate and $\lambda$ the weight decay.
     Call this before computing gradients for proper Bayesian MC
     estimation.
 
@@ -189,11 +196,16 @@ def get_posterior_ivon(
     params: optax.Params,
     weight_decay: float = 1e-4,
 ) -> tuple[optax.Params, optax.Params]:
-    """Extract the approximate posterior from IVON state.
+    r"""Extract the approximate posterior from IVON state.
 
-    Returns (mean, variance) where:
-      mean = params (the current iterate)
-      variance = 1 / (hess + weight_decay)
+    Returns ``(mean, variance)`` where the mean is the current iterate
+    (``params``) and
+
+    $$
+    v = 1 / (h + \lambda)
+    $$
+
+    with $h$ the Hessian estimate and $\lambda$ the weight decay.
 
     Args:
         state: An ``IVONState``.

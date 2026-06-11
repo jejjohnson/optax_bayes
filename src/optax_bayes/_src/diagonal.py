@@ -21,14 +21,31 @@ def blr_diagonal(
     hessian_estimator: str = "ggn_diag",
     damping: float = 1e-6,
 ) -> optax.GradientTransformation:
-    """Diagonal-Gaussian BLR as an optax transform.
+    r"""Diagonal-Gaussian BLR as an optax transform.
 
     Implements the Bayesian Learning Rule (Khan & Rue, 2023) with a
-    diagonal Gaussian variational family.  Optimizer state is stored
-    in natural-parameter form.
+    diagonal Gaussian variational family
+    $q(\theta) = \mathcal{N}(m, \operatorname{diag}(1/s))$. Optimizer
+    state is stored in natural-parameter form ($\eta = s \odot m$) and
+    each step applies
+
+    $$
+    \begin{aligned}
+    s_{t+1}    &= (1 - \rho)\, s_t    + \rho\, (s_0 - h_t) \\
+    \eta_{t+1} &= (1 - \rho)\, \eta_t + \rho\, (\eta_0 + g_t - h_t \odot m_t)
+    \end{aligned}
+    $$
+
+    with $g_t$ the log-likelihood gradient and $h_t \le 0$ the diagonal
+    Hessian estimate. The emitted optax update is $m_{t+1} - m_t$, so
+    applying updates keeps the user's params equal to the variational
+    mean. The state initialises its mean at the params passed to
+    ``init`` (standard optax drop-in semantics); ``prior_mean`` and
+    ``prior_precision`` anchor every update through $\eta_0 = s_0 m_0$.
 
     **This API expects log-likelihood gradients.**  For standard loss
-    minimisation, use ``blr_diagonal_for_loss`` instead.
+    minimisation, use
+    [`blr_diagonal_for_loss`][optax_bayes.blr_diagonal_for_loss] instead.
 
     Args:
         learning_rate: Step size rho in (0, 1].
@@ -53,10 +70,11 @@ def blr_diagonal(
     _hessian_fn = ggn_diag if hessian_estimator == "ggn_diag" else identity_hessian
 
     def init_fn(params: optax.Params) -> BLRDiagState:
+        # The variational mean starts at the user's params (standard optax
+        # drop-in semantics): eta_0 = s_0 * params, so m_0 = params.  The
+        # prior mean still anchors every update through eta0 below.
         precision = jax.tree.map(lambda p: jnp.full_like(p, prior_precision), params)
-        nat_mean = jax.tree.map(
-            lambda p: jnp.full_like(p, prior_precision * prior_mean), params
-        )
+        nat_mean = jax.tree.map(lambda p: prior_precision * p, params)
         return BLRDiagState(
             precision=precision,
             nat_mean=nat_mean,

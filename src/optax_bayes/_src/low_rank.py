@@ -14,11 +14,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-import gaussx
 import jax.numpy as jnp
 import lineax as lx
 import optax
 
+from optax_bayes._src._optional import require_gaussx
 from optax_bayes._src.hessians import resolve_hessian_estimator_full
 from optax_bayes._src.types import BLRLowRankState
 
@@ -35,6 +35,7 @@ def _build_low_rank_operator(
     Returns:
         A ``gaussx.LowRankUpdate`` operator.
     """
+    gaussx = require_gaussx("low-rank BLR operators")
     return gaussx.low_rank_plus_diag(d_diag, u)
 
 
@@ -55,6 +56,7 @@ def _low_rank_solve(
     Returns:
         Solution x, shape (d,).
     """
+    gaussx = require_gaussx("low-rank BLR solves")
     op = _build_low_rank_operator(d_diag, u)
     return gaussx.solve(op, b, solver=solver)
 
@@ -85,18 +87,28 @@ def blr_low_rank(
     damping: float = 1e-6,
     solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
-    """Low-rank Gaussian BLR as an optax transform.
+    r"""Low-rank Gaussian BLR as an optax transform.
 
-    Parameterises the precision as Lambda = diag(D) + U U^T.
-    Uses ``gaussx`` structured operators for the solve, giving
-    O(dr^2 + r^3) cost via the Woodbury identity.
+    Parameterises the precision as
+    $\Lambda = \operatorname{diag}(D) + U U^\top$ with $D \in
+    \mathbb{R}^d$ and $U \in \mathbb{R}^{d \times r}$, giving
+    $O(dr)$ storage and $O(dr^2 + r^3)$ solves via the Woodbury
+    identity through ``gaussx`` structured operators (requires the
+    optional ``gaussx`` extra).
 
-    The GGN estimator contributes rank-1 updates ``g g^T`` that
-    are accumulated into U and periodically truncated back to the
-    target rank via SVD.
+    Each step splits the Hessian estimate $-H_t$ into its diagonal
+    (absorbed into $D$) and the positive eigen-part of its
+    off-diagonal remainder (appended to $U$); the augmented factor is
+    truncated back to rank $r$ via SVD so that
+    $U_{t+1} U_{t+1}^\top \approx (1-\rho)\, U_t U_t^\top + \rho\,
+    \text{(new curvature)}$. The natural mean follows the standard BLR
+    update. The state initialises its mean at the params passed to
+    ``init``; ``prior_mean`` and ``prior_precision`` anchor every
+    update.
 
     **This API expects log-likelihood gradients.**  For standard loss
-    minimisation, use ``blr_low_rank_for_loss`` instead.
+    minimisation, use
+    [`blr_low_rank_for_loss`][optax_bayes.blr_low_rank_for_loss] instead.
 
     Args:
         learning_rate: Step size rho in (0, 1].
@@ -113,7 +125,12 @@ def blr_low_rank(
 
     Returns:
         An ``optax.GradientTransformation``.
+
+    Raises:
+        ImportError: If the optional ``gaussx`` dependency is not
+            installed.
     """
+    require_gaussx("blr_low_rank")
     _hessian_fn = resolve_hessian_estimator_full(hessian_estimator)
 
     def init_fn(params: jnp.ndarray) -> BLRLowRankState:
@@ -124,8 +141,10 @@ def blr_low_rank(
         effective_rank = min(rank, d)
         d0 = jnp.full(d, prior_precision)
         u0 = jnp.zeros((d, effective_rank))
-        m0 = jnp.zeros(d) if prior_mean is None else prior_mean
-        eta_0 = d0 * m0
+        # The variational mean starts at the user's params (standard optax
+        # drop-in semantics).  The prior mean still anchors every update
+        # through eta_0 inside update_fn.
+        eta_0 = d0 * params
         return BLRLowRankState(
             diag_precision=d0,
             low_rank_factor=u0,

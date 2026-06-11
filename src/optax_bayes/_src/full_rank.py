@@ -15,11 +15,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-import gaussx
 import jax.numpy as jnp
 import lineax as lx
 import optax
 
+from optax_bayes._src._optional import require_gaussx
 from optax_bayes._src.hessians import resolve_hessian_estimator_full
 from optax_bayes._src.types import BLRFullRankState
 
@@ -32,16 +32,34 @@ def blr_full_rank(
     damping: float = 1e-6,
     solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
-    """Full-rank Gaussian BLR as an optax transform.
+    r"""Full-rank Gaussian BLR as an optax transform.
 
     Implements the Bayesian Learning Rule (Khan & Rue, 2023) with a
-    full-rank Gaussian variational family.  Optimizer state stores the
-    precision matrix Lambda (d, d) and natural mean eta (d,).
+    full-rank Gaussian variational family
+    $q(\theta) = \mathcal{N}(m, \Lambda^{-1})$ over flat parameter
+    vectors $\theta \in \mathbb{R}^d$. Optimizer state stores the
+    precision matrix $\Lambda$ (``(d, d)``) and the natural mean
+    $\eta = \Lambda m$ (``(d,)``), updated as
 
-    Uses ``gaussx.solve`` for the precision solve at each step.
+    $$
+    \begin{aligned}
+    \Lambda_{t+1} &= (1 - \rho)\, \Lambda_t + \rho\, (\Lambda_0 - H_t) \\
+    \eta_{t+1}    &= (1 - \rho)\, \eta_t    + \rho\, (\eta_0 + g_t - H_t m_t)
+    \end{aligned}
+    $$
+
+    with $g_t$ the log-likelihood gradient and $H_t \preceq 0$ the
+    Hessian estimate. With the exact Hessian, the fixed point is the
+    exact Gaussian posterior of a conjugate model. The state initialises
+    its mean at the params passed to ``init``; ``prior_mean`` and
+    ``prior_precision`` anchor every update.
+
+    Uses ``gaussx.solve`` for the precision solve at each step (requires
+    the optional ``gaussx`` extra).
 
     **This API expects log-likelihood gradients.**  For standard loss
-    minimisation, use ``blr_full_rank_for_loss`` instead.
+    minimisation, use
+    [`blr_full_rank_for_loss`][optax_bayes.blr_full_rank_for_loss] instead.
 
     Args:
         learning_rate: Step size rho in (0, 1].
@@ -58,16 +76,23 @@ def blr_full_rank(
 
     Returns:
         An ``optax.GradientTransformation``.
+
+    Raises:
+        ImportError: If the optional ``gaussx`` dependency is not
+            installed.
     """
+    gaussx = require_gaussx("blr_full_rank")
     _hessian_fn = resolve_hessian_estimator_full(hessian_estimator)
 
     def init_fn(params: jnp.ndarray) -> BLRFullRankState:
         d = params.shape[0]
         lambda_0 = prior_precision * jnp.eye(d)
-        m0 = jnp.zeros(d) if prior_mean is None else prior_mean
+        # The variational mean starts at the user's params (standard optax
+        # drop-in semantics).  The prior mean still anchors every update
+        # through eta_0 inside update_fn.
         return BLRFullRankState(
             precision=lambda_0,
-            nat_mean=lambda_0 @ m0,
+            nat_mean=lambda_0 @ params,
             count=jnp.zeros([], jnp.int32),
         )
 
@@ -83,7 +108,7 @@ def blr_full_rank(
         eta_0 = lambda_0 @ m0
 
         # Current mean: m_t = Lambda_t^{-1} eta_t
-        op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)  # ty: ignore[invalid-assignment]
+        op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)
         m_t = gaussx.solve(op, state.nat_mean, solver=solver)
 
         # Hessian estimate
@@ -98,7 +123,7 @@ def blr_full_rank(
         new_nat_mean = (1 - rho) * state.nat_mean + rho * (eta_0 + grad_mu1)
 
         # Recover mean and compute update
-        new_op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(new_precision)  # ty: ignore[invalid-assignment]
+        new_op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(new_precision)
         new_mean = gaussx.solve(new_op, new_nat_mean, solver=solver)
         updates = new_mean - m_t
 

@@ -19,10 +19,12 @@ from jaxtyping import Array, Float
 
 
 def ggn_diag(grads: Float[Array, ...]) -> Float[Array, ...]:
-    """GGN diagonal Hessian approximation.
+    r"""GGN diagonal Hessian approximation.
 
-    Returns ``-(grads ** 2)`` elementwise.  Always non-positive, so
-    ``s0 - h`` increases precision rather than making it indefinite.
+    Returns $h = -g^2$ elementwise. Always non-positive, so the BLR
+    precision target $s_0 - h = s_0 + g^2$ increases precision rather
+    than making it indefinite — this is why the estimator acts like an
+    Adam-style curvature surrogate in the diagonal BLR path.
 
     Args:
         grads: Log-likelihood gradient leaf array.
@@ -64,9 +66,9 @@ def identity_hessian_tree(grads: dict) -> dict:
 def ggn_outer(
     grads: Float[Array, ...],
 ) -> Float[Array, ...]:
-    """GGN rank-1 outer-product Hessian approximation.
+    r"""GGN rank-1 outer-product Hessian approximation.
 
-    Returns ``-g g^T``.  Always negative semi-definite (rank 1).
+    Returns $H = -g g^\top$. Always negative semi-definite (rank 1).
 
     Args:
         grads: Log-likelihood gradient vector, shape (d,).
