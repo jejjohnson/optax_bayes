@@ -36,4 +36,4 @@ from optax_bayes._src.wrappers import (
 )
 
 
-__version__ = "0.1.0"
+__version__ = "0.0.2"
