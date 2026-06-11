@@ -13,7 +13,7 @@ Every issue carries exactly one `type:*`, one or more `area:*`, at most one `lay
 | **Type** | `type:epic-wave`, `type:epic-theme`, `type:feature`, `type:design`, `type:chore`, `type:docs`, `type:bug`, `type:research` |
 | **Area** | `area:algorithmic` (BLR math / Hessian estimators), `area:engineering`, `area:testing`, `area:docs`, `area:integration` (gaussx / efax / equinox), `area:code` |
 | **Layer** | `layer:0-primitives`, `layer:1-components`, `layer:2-models` — see the **three-layer stack** below |
-| **Wave** | `wave:0-bootstrap`, `wave:1-diagonal`, `wave:2-fullrank`, `wave:3-lowrank`, `wave:4-advanced` — matches the roadmap in [`boundaries.md`](boundaries.md) |
+| **Wave** | `wave:0-bootstrap`, `wave:1-diagonal`, `wave:2-fullrank`, `wave:3-lowrank`, `wave:4-advanced` — matches the project roadmap |
 | **Priority** | `priority:p0` (blocker), `priority:p1` (high), `priority:p2` (normal) |
 
 Bootstrap the full set on a fresh clone:
@@ -22,13 +22,13 @@ Bootstrap the full set on a fresh clone:
 make gh-labels
 ```
 
-The script lives at [`.github/scripts/create-labels.sh`](../.github/scripts/create-labels.sh). Edit the hard-coded `create …` entries to customise labels, then re-run — the script is idempotent.
+The script lives at [`.github/scripts/create-labels.sh`](https://github.com/jejjohnson/optax_bayes/blob/main/.github/scripts/create-labels.sh). Edit the hard-coded `create …` entries to customise labels, then re-run — the script is idempotent.
 
 ---
 
 ## Three-Layer Stack
 
-optax_bayes follows the three-layer architecture described in [`architecture.md`](architecture.md):
+optax_bayes follows the three-layer architecture described in the design docs:
 
 | Layer | Label | Contents | Source paths |
 |---|---|---|---|
@@ -36,7 +36,7 @@ optax_bayes follows the three-layer architecture described in [`architecture.md`
 | **L1 Components** | `layer:1-components` | optax `GradientTransformation`s: `blr_diagonal`, `blr_full_rank`, `blr_low_rank` | `src/optax_bayes/_src/diagonal.py`, `full_rank.py`, `low_rank.py`, `types.py` |
 | **L2 Models** | `layer:2-models` | `_for_loss` wrappers, `get_posterior_*` extraction, schedule composition | `src/optax_bayes/_src/wrappers.py`, `posterior.py` |
 
-The labeler at [`.github/labeler.yml`](../.github/labeler.yml) auto-applies the right `layer:*` label based on which source file a PR touches.
+The labeler at [`.github/labeler.yml`](https://github.com/jejjohnson/optax_bayes/blob/main/.github/labeler.yml) auto-applies the right `layer:*` label based on which source file a PR touches.
 
 ---
 
@@ -59,7 +59,7 @@ Work is organised as **Wave → Theme → Issue**:
 
 Stragglers are discouraged: any `type:feature` issue should attach to a Theme epic. If no suitable theme exists, create one first.
 
-### The optax_bayes roadmap (from [`boundaries.md`](boundaries.md))
+### The optax_bayes roadmap
 
 | Wave | Milestone | Focus |
 |---|---|---|
@@ -73,7 +73,7 @@ Stragglers are discouraged: any `type:feature` issue should attach to a Theme ep
 
 ## Issue Format
 
-Issue templates live in [`.github/ISSUE_TEMPLATE/`](../.github/ISSUE_TEMPLATE/):
+Issue templates live in [`.github/ISSUE_TEMPLATE/`](https://github.com/jejjohnson/optax_bayes/blob/main/.github/ISSUE_TEMPLATE/):
 
 | Template | When to use |
 |---|---|
@@ -118,7 +118,7 @@ GitHub's task-list feature links bidirectionally from the parent, so checklist i
 
 ## Drafting a wave backlog
 
-For large planning exercises (new wave, new release, large refactor), draft the whole backlog as one markdown file **before** opening GitHub issues. A template lives at [`docs/templates/wave-backlog.md`](templates/wave-backlog.md).
+For large planning exercises (new wave, new release, large refactor), draft the whole backlog as one markdown file **before** opening GitHub issues. A template lives at [`docs/templates/wave-backlog.md`](https://github.com/jejjohnson/optax_bayes/blob/main/docs/templates/wave-backlog.md).
 
 Why:
 
@@ -130,7 +130,7 @@ Suggested prefix for optax_bayes drafts: `OBX`.
 
 Workflow:
 
-1. Copy [`docs/templates/wave-backlog.md`](templates/wave-backlog.md) into `.plans/` (gitignored). Rename to describe the wave — e.g. `.plans/wave-1-diagonal-backlog.md`.
+1. Copy [`docs/templates/wave-backlog.md`](https://github.com/jejjohnson/optax_bayes/blob/main/docs/templates/wave-backlog.md) into `.plans/` (gitignored). Rename to describe the wave — e.g. `.plans/wave-1-diagonal-backlog.md`.
 2. Number drafts sequentially: `OBX-01`, `OBX-02`, …
 3. Fill in shared context at the top, then draft each issue body. Reach for the [`api/`](https://github.com/jejjohnson/optax_bayes/tree/main/docs/api) and the math treatment when filling the Design Snapshot / Mathematical Notes sections.
 4. When the file is ready, open each draft as a real GitHub issue using the matching `.github/ISSUE_TEMPLATE/`.
@@ -154,4 +154,4 @@ Note that `make format` **mutates files** — it formats and applies autofixes. 
 
 Pre-commit hooks run ruff on every commit. Run `make precommit` to apply them to all files manually.
 
-Commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/) specification — enforced on PR titles by [`.github/workflows/conventional-commits.yml`](../.github/workflows/conventional-commits.yml).
+Commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/) specification — enforced on PR titles by [`.github/workflows/conventional-commits.yml`](https://github.com/jejjohnson/optax_bayes/blob/main/.github/workflows/conventional-commits.yml).

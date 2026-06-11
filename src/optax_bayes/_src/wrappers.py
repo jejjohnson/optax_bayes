@@ -53,10 +53,13 @@ def blr_diagonal_for_loss(
     hessian_estimator: str = "ggn_diag",
     damping: float = 1e-6,
 ) -> optax.GradientTransformation:
-    """Diagonal BLR accepting standard loss gradients.
+    r"""Diagonal BLR accepting standard loss gradients.
 
-    Drop-in replacement for ``optax.adam`` / ``optax.sgd``.
-    Internally negates gradients: ``g_loglik = -g_loss``.
+    Drop-in replacement for ``optax.adam`` / ``optax.sgd``: wraps
+    [`blr_diagonal`][optax_bayes.blr_diagonal] and converts the loss
+    gradient into the log-likelihood gradient it expects,
+    $\nabla_\theta \log p(\mathcal{D} \mid \theta) =
+    -\nabla_\theta L(\theta)$.
 
     Args:
         learning_rate: Step size rho in (0, 1].
@@ -87,11 +90,12 @@ def blr_full_rank_for_loss(
     damping: float = 1e-6,
     solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
-    """Full-rank BLR accepting standard loss gradients.
+    r"""Full-rank BLR accepting standard loss gradients.
 
-    Internally negates gradients (``g_loglik = -g_loss``) and, for
-    callable Hessian estimators, negates the returned matrix so the
-    inner BLR transform receives log-likelihood Hessians.
+    Wraps [`blr_full_rank`][optax_bayes.blr_full_rank]: negates incoming
+    gradients ($g_{\text{loglik}} = -g_{\text{loss}}$) and, for callable
+    Hessian estimators, negates the returned matrix so the inner BLR
+    transform receives log-likelihood Hessians.
 
     Args:
         learning_rate: Step size rho in (0, 1].
@@ -126,11 +130,12 @@ def blr_low_rank_for_loss(
     damping: float = 1e-6,
     solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
-    """Low-rank BLR accepting standard loss gradients.
+    r"""Low-rank BLR accepting standard loss gradients.
 
-    Internally negates gradients (``g_loglik = -g_loss``) and, for
-    callable Hessian estimators, negates the returned matrix so the
-    inner BLR transform receives log-likelihood Hessians.
+    Wraps [`blr_low_rank`][optax_bayes.blr_low_rank]: negates incoming
+    gradients ($g_{\text{loglik}} = -g_{\text{loss}}$) and, for callable
+    Hessian estimators, negates the returned matrix so the inner BLR
+    transform receives log-likelihood Hessians.
 
     Args:
         learning_rate: Step size rho in (0, 1].

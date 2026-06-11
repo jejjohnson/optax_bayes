@@ -16,12 +16,18 @@ def newton(
     damping: float = 1e-6,
     solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
-    """Newton's method as full-rank BLR.
+    r"""Newton's method as full-rank BLR.
 
-    Equivalent to BLR with rho=1, near-flat prior, and exact Hessian.
-    Recovers the classic update: m_{t+1} = m_t - H^{-1} g.
+    Equivalent to BLR with $\rho = 1$, a near-flat prior, and an exact
+    Hessian, recovering the classic update
 
-    **Expects log-likelihood gradients.**
+    $$
+    m_{t+1} = m_t - H^{-1} g.
+    $$
+
+    **Expects log-likelihood gradients.** For standard loss
+    minimisation, use [`newton_for_loss`][optax_bayes.newton_for_loss]
+    instead.
 
     Args:
         hessian_fn: Callable ``fn(mean, grads) -> (d, d)`` returning
@@ -54,8 +60,9 @@ def newton_for_loss(
 ) -> optax.GradientTransformation:
     """Newton's method for loss minimisation.
 
-    Accepts standard loss gradients and a loss Hessian function.
-    Internally negates both to match the BLR log-likelihood convention.
+    Wraps [`newton`][optax_bayes.newton]: accepts standard loss
+    gradients and a loss Hessian function, negating both internally to
+    match the BLR log-likelihood convention.
 
     Args:
         loss_hessian_fn: Callable ``fn(mean) -> (d, d)`` returning

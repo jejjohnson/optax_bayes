@@ -11,22 +11,14 @@
 
 **The Bayesian Learning Rule as optax `GradientTransformation`s.**
 
-`optax_bayes` implements the Bayesian Learning Rule (Khan & Rue, 2023) as a
-family of drop-in [optax](https://github.com/google-deepmind/optax) optimizers.
-Train with a normal optax loop, then read an approximate Gaussian posterior
-straight out of the optimizer state.
+Train with a normal [optax](https://github.com/google-deepmind/optax) loop,
+then read an approximate Gaussian posterior straight out of the optimizer
+state. Implements the Bayesian Learning Rule (Khan & Rue, 2023) in diagonal,
+full-rank, and low-rank variants, plus IVON (Shen et al., 2024) and Newton's
+method. Structured solves are backed by
+[gaussx](https://github.com/jejjohnson/gaussx).
 
-- **Diagonal BLR** — `blr_diagonal_for_loss`: Adam-like cost, per-parameter
-  uncertainty. Works on arbitrary parameter pytrees.
-- **Full-rank BLR** — `blr_full_rank_for_loss`: exact Gaussian posterior
-  recovery on conjugate problems; supports exact-Hessian callables.
-- **Low-rank BLR** — `blr_low_rank_for_loss`: `Lambda = diag(D) + U U^T`
-  precision with O(dr) storage, Woodbury solves via
-  [gaussx](https://github.com/jejjohnson/gaussx) structured operators.
-- **IVON** — `ivon`: Improved Variational Online Newton (Shen et al., 2024)
-  for deep learning.
-- **Newton's method** — `newton_for_loss`: classic damped Newton as the
-  rho=1 special case of full-rank BLR.
+**Documentation**: [jejjohnson.github.io/optax_bayes](https://jejjohnson.github.io/optax_bayes)
 
 ## Installation
 
@@ -41,7 +33,7 @@ The full-rank and low-rank transforms (and their posterior/sampling helpers)
 need the optional `gaussx` extra and raise an informative `ImportError`
 pointing at it otherwise.
 
-## Quickstart
+## Quick Start
 
 ```python
 import jax
@@ -76,19 +68,53 @@ from optax_bayes import sample_posterior_diagonal
 theta = sample_posterior_diagonal(state, jax.random.key(0))
 ```
 
-### Conventions
+## What's Inside
 
-- `*_for_loss` transforms accept standard **loss** gradients (like
+### Variational families
+
+| Variant | Precision | Cost / step | Storage | Transforms |
+|---------|-----------|-------------|---------|------------|
+| **Diagonal** | `diag(s)` | O(d) | O(d) | `blr_diagonal`, `blr_diagonal_for_loss`, `blr_with_schedule` |
+| **Full-rank** | dense (d, d) | O(d^3) | O(d^2) | `blr_full_rank`, `blr_full_rank_for_loss` |
+| **Low-rank** | `diag(D) + U U^T` | O(dr^2 + r^3) | O(dr) | `blr_low_rank`, `blr_low_rank_for_loss` |
+
+### Deep-learning variant
+
+`ivon` — Improved Variational Online Newton (Shen et al., 2024): separate EMA
+rates for mean and precision, weight decay as the prior, natural-space
+gradient clipping, and `sample_ivon` for proper Bayesian MC training.
+
+### Classic special case
+
+`newton` / `newton_for_loss` — damped Newton's method as full-rank BLR with
+rho = 1, a near-flat prior, and an exact Hessian.
+
+### Posterior extraction & sampling
+
+Every family pairs a `get_posterior_*` helper (mean + variance/covariance
+straight from the optimizer state) with a reparameterised `sample_posterior_*`
+sampler. Low-rank sampling never densifies the covariance — it uses a
+two-step Woodbury trick at O(dr^2 + r^3) cost.
+
+## API Notes
+
+- The `*_for_loss` transforms accept standard **loss** gradients (like
   `optax.adam`). The bare `blr_*` transforms expect **log-likelihood**
   gradients and are the right layer for custom inference loops.
 - Optimizer state is stored in natural-parameter form
   (`eta = s * m`, `s = 1 / v`); state initialises its mean at the params
   passed to `opt.init`, while `prior_mean` / `prior_precision` anchor
   every update.
+- `hessian_estimator` accepts string selectors (`"ggn_diag"` / `"identity"`
+  for diagonal; `"ggn"` / `"identity"` for full- and low-rank) or, for the
+  full- and low-rank variants, a callable `fn(mean, grads) -> (d, d)` —
+  pass the exact Hessian to recover the exact posterior on conjugate models.
 
 ## Development
 
 ```bash
+git clone https://github.com/jejjohnson/optax_bayes.git
+cd optax_bayes
 make install      # uv sync --all-groups + pre-commit hooks
 make test-fast    # fast unit tests (matches PR CI)
 make test         # entire suite, in parallel

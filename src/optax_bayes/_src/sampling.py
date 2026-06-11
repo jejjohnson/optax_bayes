@@ -1,12 +1,10 @@
 """Monte Carlo sampling from BLR posterior state.
 
-Provides reparameterised posterior samples for MC estimation:
-  theta_hat = m + L * eps,  eps ~ N(0, I)
-
-where L is the Cholesky-like square root of the covariance.
-For diagonal: L = diag(1/sqrt(s)).
-For full-rank: L = cholesky(Lambda^{-1}).
-For low-rank: L via Woodbury.
+Provides reparameterised posterior samples ``theta = m + L @ eps`` with
+``eps ~ N(0, I)``, where ``L`` is a square root of the covariance:
+``diag(1/sqrt(s))`` for the diagonal family, the inverse-transpose
+Cholesky factor of the precision for the full-rank family, and a
+Woodbury-based two-step sampler for the low-rank family.
 """
 
 from __future__ import annotations
@@ -25,10 +23,14 @@ def sample_posterior_diagonal(
     state: BLRDiagState,
     key: jax.Array,
 ) -> optax.Params:
-    """Draw one reparameterised sample from the diagonal posterior.
+    r"""Draw one reparameterised sample from the diagonal posterior.
 
-    Samples theta ~ N(m, diag(1/s)) via:
-      theta = m + eps / sqrt(s),  eps ~ N(0, I)
+    Samples $\theta \sim \mathcal{N}(m, \operatorname{diag}(1/s))$ via
+
+    $$
+    \theta = m + \epsilon / \sqrt{s}, \qquad
+    \epsilon \sim \mathcal{N}(0, I).
+    $$
 
     Args:
         state: A ``BLRDiagState``.
@@ -55,12 +57,15 @@ def sample_posterior_full_rank(
     state: BLRFullRankState,
     key: jax.Array,
 ) -> jnp.ndarray:
-    """Draw one reparameterised sample from the full-rank posterior.
+    r"""Draw one reparameterised sample from the full-rank posterior.
 
-    Samples theta ~ N(m, Lambda^{-1}) via Cholesky:
-      theta = m + L^{-T} eps,  eps ~ N(0, I)
+    Samples $\theta \sim \mathcal{N}(m, \Lambda^{-1})$ via the
+    Cholesky factor $L L^\top = \Lambda$ of the precision:
 
-    where L L^T = Lambda (Cholesky of precision).
+    $$
+    \theta = m + L^{-\top} \epsilon, \qquad
+    \epsilon \sim \mathcal{N}(0, I).
+    $$
 
     Args:
         state: A ``BLRFullRankState``.
@@ -89,18 +94,18 @@ def sample_posterior_low_rank(
     state: BLRLowRankState,
     key: jax.Array,
 ) -> jnp.ndarray:
-    """Draw one reparameterised sample from the low-rank posterior.
+    r"""Draw one reparameterised sample from the low-rank posterior.
 
-    Samples theta ~ N(m, Lambda^{-1}) where Lambda = diag(D) + U U^T.
+    Samples $\theta \sim \mathcal{N}(m, \Lambda^{-1})$ where
+    $\Lambda = \operatorname{diag}(D) + U U^\top$, using a two-step
+    Gaussian trick that never forms the dense covariance:
 
-    Uses a two-step Gaussian trick that avoids forming the dense
-    covariance matrix:
+    1. Draw $z \sim \mathcal{N}(0, \Lambda)$ cheaply via
+       $z = \sqrt{D} \odot \epsilon_1 + U \epsilon_2$.
+    2. Solve $\Lambda y = z$ via Woodbury; then
+       $y \sim \mathcal{N}(0, \Lambda^{-1})$.
 
-    1. Draw z ~ N(0, Lambda) cheaply via
-       ``z = sqrt(D) * eps_1 + U @ eps_2``.
-    2. Solve ``Lambda y = z`` via Woodbury; then y ~ N(0, Lambda^{-1}).
-
-    Cost: O(d r + r^3) memory / O(d r^2 + r^3) time.
+    Cost: $O(dr + r^3)$ memory, $O(dr^2 + r^3)$ time.
 
     Args:
         state: A ``BLRLowRankState``.

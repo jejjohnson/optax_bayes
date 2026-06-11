@@ -15,14 +15,14 @@ from optax_bayes._src.types import BLRDiagState, BLRFullRankState, BLRLowRankSta
 def get_posterior_diagonal(
     state: BLRDiagState,
 ) -> tuple[optax.Params, optax.Params]:
-    """Extract the approximate posterior from diagonal BLR state.
+    r"""Extract the approximate posterior from diagonal BLR state.
 
-    Returns the mean and variance of q(theta) = N(m, diag(v)) where:
+    Returns the mean and variance of
+    $q(\theta) = \mathcal{N}(m, \operatorname{diag}(v))$ where
 
-    .. code-block:: text
-
-        mean     = eta / s
-        variance = 1 / s
+    $$
+    m = \eta / s, \qquad v = 1 / s.
+    $$
 
     Args:
         state: A ``BLRDiagState`` from ``blr_diagonal`` or
@@ -40,10 +40,12 @@ def get_posterior_full_rank(
     state: BLRFullRankState,
     solver: lx.AbstractLinearSolver | None = None,
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
-    """Extract the approximate posterior from full-rank BLR state.
+    r"""Extract the approximate posterior from full-rank BLR state.
 
-    Uses ``gaussx.solve`` for the mean and ``gaussx.inv`` for the
-    covariance.
+    Returns the mean and covariance of
+    $q(\theta) = \mathcal{N}(\Lambda^{-1}\eta,\ \Lambda^{-1})$,
+    using ``gaussx.solve`` for the mean and ``gaussx.inv`` for the
+    covariance (requires the optional ``gaussx`` extra).
 
     Args:
         state: A ``BLRFullRankState`` from ``blr_full_rank`` or
@@ -66,10 +68,14 @@ def get_posterior_low_rank(
     state: BLRLowRankState,
     solver: lx.AbstractLinearSolver | None = None,
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
-    """Extract the approximate posterior from low-rank BLR state.
+    r"""Extract the approximate posterior from low-rank BLR state.
 
-    Uses ``gaussx`` structured operators for the mean solve and
-    ``gaussx.inv`` for the covariance (Woodbury-dispatched).
+    Returns the mean and covariance of
+    $q(\theta) = \mathcal{N}(\Lambda^{-1}\eta,\ \Lambda^{-1})$ with
+    $\Lambda = \operatorname{diag}(D) + U U^\top$, using ``gaussx``
+    structured operators for the mean solve and ``gaussx.inv`` for the
+    covariance (Woodbury-dispatched; requires the optional ``gaussx``
+    extra).
 
     Args:
         state: A ``BLRLowRankState`` from ``blr_low_rank`` or

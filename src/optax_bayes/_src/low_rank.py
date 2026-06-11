@@ -87,18 +87,28 @@ def blr_low_rank(
     damping: float = 1e-6,
     solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
-    """Low-rank Gaussian BLR as an optax transform.
+    r"""Low-rank Gaussian BLR as an optax transform.
 
-    Parameterises the precision as Lambda = diag(D) + U U^T.
-    Uses ``gaussx`` structured operators for the solve, giving
-    O(dr^2 + r^3) cost via the Woodbury identity.
+    Parameterises the precision as
+    $\Lambda = \operatorname{diag}(D) + U U^\top$ with $D \in
+    \mathbb{R}^d$ and $U \in \mathbb{R}^{d \times r}$, giving
+    $O(dr)$ storage and $O(dr^2 + r^3)$ solves via the Woodbury
+    identity through ``gaussx`` structured operators (requires the
+    optional ``gaussx`` extra).
 
-    The GGN estimator contributes rank-1 updates ``g g^T`` that
-    are accumulated into U and periodically truncated back to the
-    target rank via SVD.
+    Each step splits the Hessian estimate $-H_t$ into its diagonal
+    (absorbed into $D$) and the positive eigen-part of its
+    off-diagonal remainder (appended to $U$); the augmented factor is
+    truncated back to rank $r$ via SVD so that
+    $U_{t+1} U_{t+1}^\top \approx (1-\rho)\, U_t U_t^\top + \rho\,
+    \text{(new curvature)}$. The natural mean follows the standard BLR
+    update. The state initialises its mean at the params passed to
+    ``init``; ``prior_mean`` and ``prior_precision`` anchor every
+    update.
 
     **This API expects log-likelihood gradients.**  For standard loss
-    minimisation, use ``blr_low_rank_for_loss`` instead.
+    minimisation, use
+    [`blr_low_rank_for_loss`][optax_bayes.blr_low_rank_for_loss] instead.
 
     Args:
         learning_rate: Step size rho in (0, 1].
@@ -115,6 +125,10 @@ def blr_low_rank(
 
     Returns:
         An ``optax.GradientTransformation``.
+
+    Raises:
+        ImportError: If the optional ``gaussx`` dependency is not
+            installed.
     """
     require_gaussx("blr_low_rank")
     _hessian_fn = resolve_hessian_estimator_full(hessian_estimator)

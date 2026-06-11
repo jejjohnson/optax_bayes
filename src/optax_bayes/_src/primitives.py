@@ -19,18 +19,21 @@ def blr_diag_update_step(
     s0: Float[Array, ...],
     rho: float,
 ) -> tuple[Float[Array, ...], Float[Array, ...], Float[Array, ...]]:
-    """One diagonal BLR update step on leaf arrays.
+    r"""One diagonal BLR update step on leaf arrays.
 
-    Implements the natural-parameter update:
+    Implements the natural-parameter update
 
-    .. code-block:: text
+    $$
+    \begin{aligned}
+    s_{t+1}    &= (1 - \rho)\, s_t    + \rho\, (s_0 - h) \\
+    \eta_{t+1} &= (1 - \rho)\, \eta_t + \rho\, (\eta_0 + g - h \odot m_t) \\
+    m_{t+1}    &= \eta_{t+1} / s_{t+1}
+    \end{aligned}
+    $$
 
-        s_next   = (1 - rho) * s   + rho * (s0   - diag_h)
-        eta_next = (1 - rho) * eta + rho * (eta0 + g - diag_h * m)
-        m_next   = eta_next / s_next
-
-    The ``-diag_h * m`` correction is the Bonnet-Price identity term;
-    omitting it yields incorrect fixed points.
+    where $h$ is the diagonal Hessian estimate. The $-h \odot m$
+    correction is the Bonnet-Price identity term; omitting it yields
+    incorrect fixed points.
 
     Args:
         eta: Current natural mean, eta = s * m.

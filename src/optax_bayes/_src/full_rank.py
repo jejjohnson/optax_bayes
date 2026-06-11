@@ -32,16 +32,34 @@ def blr_full_rank(
     damping: float = 1e-6,
     solver: lx.AbstractLinearSolver | None = None,
 ) -> optax.GradientTransformation:
-    """Full-rank Gaussian BLR as an optax transform.
+    r"""Full-rank Gaussian BLR as an optax transform.
 
     Implements the Bayesian Learning Rule (Khan & Rue, 2023) with a
-    full-rank Gaussian variational family.  Optimizer state stores the
-    precision matrix Lambda (d, d) and natural mean eta (d,).
+    full-rank Gaussian variational family
+    $q(\theta) = \mathcal{N}(m, \Lambda^{-1})$ over flat parameter
+    vectors $\theta \in \mathbb{R}^d$. Optimizer state stores the
+    precision matrix $\Lambda$ (``(d, d)``) and the natural mean
+    $\eta = \Lambda m$ (``(d,)``), updated as
 
-    Uses ``gaussx.solve`` for the precision solve at each step.
+    $$
+    \begin{aligned}
+    \Lambda_{t+1} &= (1 - \rho)\, \Lambda_t + \rho\, (\Lambda_0 - H_t) \\
+    \eta_{t+1}    &= (1 - \rho)\, \eta_t    + \rho\, (\eta_0 + g_t - H_t m_t)
+    \end{aligned}
+    $$
+
+    with $g_t$ the log-likelihood gradient and $H_t \preceq 0$ the
+    Hessian estimate. With the exact Hessian, the fixed point is the
+    exact Gaussian posterior of a conjugate model. The state initialises
+    its mean at the params passed to ``init``; ``prior_mean`` and
+    ``prior_precision`` anchor every update.
+
+    Uses ``gaussx.solve`` for the precision solve at each step (requires
+    the optional ``gaussx`` extra).
 
     **This API expects log-likelihood gradients.**  For standard loss
-    minimisation, use ``blr_full_rank_for_loss`` instead.
+    minimisation, use
+    [`blr_full_rank_for_loss`][optax_bayes.blr_full_rank_for_loss] instead.
 
     Args:
         learning_rate: Step size rho in (0, 1].
@@ -58,6 +76,10 @@ def blr_full_rank(
 
     Returns:
         An ``optax.GradientTransformation``.
+
+    Raises:
+        ImportError: If the optional ``gaussx`` dependency is not
+            installed.
     """
     gaussx = require_gaussx("blr_full_rank")
     _hessian_fn = resolve_hessian_estimator_full(hessian_estimator)

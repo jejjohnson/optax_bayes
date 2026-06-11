@@ -11,14 +11,18 @@ def natural_to_mean_diag(
     eta: Float[Array, ...],
     s: Float[Array, ...],
 ) -> tuple[Float[Array, ...], Float[Array, ...]]:
-    """Convert natural parameters to mean parameters (diagonal case).
+    r"""Convert natural parameters to mean parameters (diagonal case).
+
+    $$
+    m = \eta / s, \qquad v = 1 / s.
+    $$
 
     Args:
-        eta: Natural mean, eta = s * m.
-        s: Precision (inverse variance), s = 1 / v.
+        eta: Natural mean, $\eta = s \odot m$.
+        s: Precision (inverse variance), $s = 1 / v$.
 
     Returns:
-        Tuple ``(m, v)`` where ``m = eta / s`` and ``v = 1 / s``.
+        Tuple ``(m, v)``.
     """
     m = eta / s
     v = 1.0 / s
@@ -29,14 +33,18 @@ def mean_to_natural_diag(
     m: Float[Array, ...],
     v: Float[Array, ...],
 ) -> tuple[Float[Array, ...], Float[Array, ...]]:
-    """Convert mean parameters to natural parameters (diagonal case).
+    r"""Convert mean parameters to natural parameters (diagonal case).
+
+    $$
+    \eta = m / v, \qquad s = 1 / v.
+    $$
 
     Args:
         m: Mean.
         v: Variance (must be positive).
 
     Returns:
-        Tuple ``(eta, s)`` where ``eta = m / v`` and ``s = 1 / v``.
+        Tuple ``(eta, s)``.
     """
     s = 1.0 / v
     eta = m * s
