@@ -9,6 +9,11 @@ version: 0.1.0
 
 *Formerly bayes_rule — renamed to optax-bayes.*
 
+> These are the original planning drafts. The maintained versions, updated to
+> match the shipped code, are in the docs site: `docs/vision.md`,
+> `docs/architecture.md`, `docs/boundaries.md`, `docs/decisions.md` and
+> `docs/math.md` (from `research/overview.md`).
+
 ## Structure
 
 ```
