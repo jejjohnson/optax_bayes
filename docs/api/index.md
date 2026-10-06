@@ -43,6 +43,9 @@ A few patterns hold across the whole package:
 
 ## Mathematical Background
 
+A summary follows; [Mathematical Background](../math.md) has the derivations,
+the per-family pseudocode, the numerical safeguards and the model zoo.
+
 The optimizer stores natural parameters of a Gaussian $q(\theta)$ and updates
 them via
 

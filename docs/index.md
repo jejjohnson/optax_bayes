@@ -9,8 +9,10 @@ low-rank variants, plus IVON (Shen et al., 2024) and Newton's method.
 
 **New here?** Start with the
 [Diagonal BLR Walkthrough](notebooks/diagonal_blr_walkthrough.ipynb), then
-browse the [API Reference](api/index.md) for the full surface and the
-mathematical background.
+browse the [API Reference](api/index.md) for the full surface. The
+[Mathematical Background](math.md) derives every update, and
+[Vision](vision.md), [Architecture](architecture.md), [Scope](boundaries.md)
+and [Decisions](decisions.md) cover the design.
 
 ## Installation
 

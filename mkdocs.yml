@@ -53,6 +53,10 @@ plugins:
 
 nav:
   - Home: index.md
+  - Vision: vision.md
+  - Architecture: architecture.md
+  - Scope: boundaries.md
+  - Math: math.md
   - Examples:
       - Diagonal BLR Walkthrough: notebooks/diagonal_blr_walkthrough.ipynb
   - API Reference:
@@ -61,6 +65,7 @@ nav:
       - Full-Rank BLR: api/full_rank.md
       - Low-Rank BLR: api/low_rank.md
       - IVON: api/ivon.md
+  - Decisions: decisions.md
   - Contributing: contributing.md
   - Changelog: CHANGELOG.md
 
