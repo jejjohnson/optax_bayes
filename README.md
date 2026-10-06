@@ -76,7 +76,12 @@ theta = sample_posterior_diagonal(state, jax.random.key(0))
 |---------|-----------|-------------|---------|------------|
 | **Diagonal** | `diag(s)` | O(d) | O(d) | `blr_diagonal`, `blr_diagonal_for_loss`, `blr_with_schedule` |
 | **Full-rank** | dense (d, d) | O(d^3) | O(d^2) | `blr_full_rank`, `blr_full_rank_for_loss` |
-| **Low-rank** | `diag(D) + U U^T` | O(dr^2 + r^3) | O(dr) | `blr_low_rank`, `blr_low_rank_for_loss` |
+| **Low-rank** | `diag(D) + U U^T` | O(dr^2 + r^3)* | O(dr) | `blr_low_rank`, `blr_low_rank_for_loss` |
+
+\* With the built-in `"ggn"` / `"identity"` estimators. The low-rank update is
+SLANG's (Mishkin et al., 2018): new curvature is kept in factor form and
+truncated by a thin SVD, with the discarded diagonal folded into `D`. A
+callable estimator returns a dense (d, d) Hessian, which costs O(d^3) to factor.
 
 ### Deep-learning variant
 

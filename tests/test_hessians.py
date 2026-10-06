@@ -11,7 +11,9 @@ from optax_bayes._src.hessians import (
     ggn_outer,
     identity_hessian,
     identity_hessian_full,
+    psd_factor,
     resolve_hessian_estimator_full,
+    resolve_hessian_factor_low_rank,
 )
 
 
@@ -120,3 +122,33 @@ class TestResolveHessianEstimator:
     def test_unknown_string_raises(self):
         with pytest.raises(ValueError, match="bad"):
             resolve_hessian_estimator_full("bad")
+
+
+class TestResolveHessianFactorLowRank:
+    def test_ggn_is_the_gradient(self):
+        g = jnp.array([1.0, -2.0, 0.5])
+        factor = resolve_hessian_factor_low_rank("ggn")(jnp.zeros(3), g)
+        assert factor.shape == (3, 1)
+        assert jnp.allclose(factor @ factor.T, jnp.outer(g, g))
+
+    def test_identity_is_empty(self):
+        factor = resolve_hessian_factor_low_rank("identity")(jnp.zeros(3), jnp.ones(3))
+        assert factor.shape == (3, 0)
+
+    def test_callable_factors_negative_hessian(self):
+        neg_h = jnp.array([[2.0, 0.5], [0.5, 1.0]])
+        fn = resolve_hessian_factor_low_rank(lambda m, g: -neg_h)
+        factor = fn(jnp.zeros(2), jnp.zeros(2))
+        assert jnp.allclose(factor @ factor.T, neg_h, atol=1e-6)
+
+    def test_psd_factor_drops_negative_curvature(self):
+        factor = psd_factor(jnp.diag(jnp.array([3.0, -1.0])))
+        assert jnp.allclose(factor @ factor.T, jnp.diag(jnp.array([3.0, 0.0])))
+
+    def test_unknown_string_raises(self):
+        with pytest.raises(ValueError, match="bad"):
+            resolve_hessian_factor_low_rank("bad")
+
+    def test_non_callable_raises(self):
+        with pytest.raises(TypeError):
+            resolve_hessian_factor_low_rank(3)

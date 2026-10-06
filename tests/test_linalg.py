@@ -69,8 +69,11 @@ class TestSolverArgument:
     @pytest.mark.parametrize("solver", SOLVERS)
     def test_low_rank(self, solver):
         params, grads = jnp.ones(4), jnp.arange(4.0)
-        ref, ref_state = _run(blr_low_rank(rank=2), params, grads)
-        out, state = _run(blr_low_rank(rank=2, solver=solver), params, grads)
+        # A well-conditioned prior, so float32 CG agrees with the direct solve.
+        ref, ref_state = _run(blr_low_rank(rank=2, prior_precision=1.0), params, grads)
+        out, state = _run(
+            blr_low_rank(rank=2, prior_precision=1.0, solver=solver), params, grads
+        )
         assert jnp.allclose(out, ref, atol=TOL)
         mean, cov = get_posterior_low_rank(state, solver=solver)
         ref_mean, ref_cov = get_posterior_low_rank(ref_state)
