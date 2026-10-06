@@ -581,8 +581,8 @@ wheels = [
 
 [[package]]
 name = "gaussx"
-version = "0.0.18"
-source = { git = "https://github.com/jejjohnson/gaussx?rev=cd6264c92d32f433515d3efb06a0672a02280339#cd6264c92d32f433515d3efb06a0672a02280339" }
+version = "0.6.3"
+source = { git = "https://github.com/jejjohnson/gaussx?rev=74599b66a0cd0ea18fe1f718584d80571a57d4c6#74599b66a0cd0ea18fe1f718584d80571a57d4c6" }
 dependencies = [
     { name = "einx" },
     { name = "equinox" },
@@ -1513,7 +1513,7 @@ wheels = [
 
 [[package]]
 name = "optax-bayes"
-version = "0.1.0"
+version = "0.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "jax" },
@@ -1565,8 +1565,8 @@ typecheck = [
 requires-dist = [
     { name = "equinox", marker = "extra == 'all'", specifier = ">=0.11" },
     { name = "equinox", marker = "extra == 'equinox'", specifier = ">=0.11" },
-    { name = "gaussx", marker = "extra == 'all'", git = "https://github.com/jejjohnson/gaussx?rev=cd6264c92d32f433515d3efb06a0672a02280339" },
-    { name = "gaussx", marker = "extra == 'gaussx'", git = "https://github.com/jejjohnson/gaussx?rev=cd6264c92d32f433515d3efb06a0672a02280339" },
+    { name = "gaussx", marker = "extra == 'all'", git = "https://github.com/jejjohnson/gaussx?rev=74599b66a0cd0ea18fe1f718584d80571a57d4c6" },
+    { name = "gaussx", marker = "extra == 'gaussx'", git = "https://github.com/jejjohnson/gaussx?rev=74599b66a0cd0ea18fe1f718584d80571a57d4c6" },
     { name = "jax", specifier = ">=0.4.35" },
     { name = "jaxlib", specifier = ">=0.4.35" },
     { name = "jaxtyping", specifier = ">=0.2.34" },
@@ -1577,7 +1577,7 @@ provides-extras = ["gaussx", "equinox", "all"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "gaussx", git = "https://github.com/jejjohnson/gaussx?rev=cd6264c92d32f433515d3efb06a0672a02280339" },
+    { name = "gaussx", git = "https://github.com/jejjohnson/gaussx?rev=74599b66a0cd0ea18fe1f718584d80571a57d4c6" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },

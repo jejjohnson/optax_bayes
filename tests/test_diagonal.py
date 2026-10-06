@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib.metadata
+
 import jax
 import jax.numpy as jnp
 import optax
@@ -231,4 +233,6 @@ class TestRootImports:
         assert hasattr(optax_bayes, "get_posterior_diagonal")
 
     def test_version(self):
-        assert optax_bayes.__version__ == "0.1.0"
+        # release-please bumps both, so check they agree rather than
+        # pinning a literal that goes stale on the next release.
+        assert optax_bayes.__version__ == importlib.metadata.version("optax_bayes")
