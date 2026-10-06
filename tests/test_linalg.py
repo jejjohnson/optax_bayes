@@ -17,11 +17,16 @@ from optax_bayes import (
 from optax_bayes._src.linalg import low_rank_precision_operator, precision_operator
 
 
+# Agreement tolerance between solvers, and CG's own tolerance, scaled to the
+# active float (float64 by default, float32 in the no-x64 lane).
+EPS = float(jnp.finfo(jnp.asarray(1.0).dtype).eps)
+TOL = EPS**0.5
+
 SOLVERS = [
     pytest.param(None, id="default"),
     pytest.param(lx.Cholesky(), id="lx.Cholesky"),
     pytest.param(gaussx.DenseSolver(), id="gaussx.DenseSolver"),
-    pytest.param(gaussx.CGSolver(rtol=1e-10, atol=1e-10), id="gaussx.CGSolver"),
+    pytest.param(gaussx.CGSolver(rtol=100 * EPS, atol=100 * EPS), id="gaussx.CGSolver"),
 ]
 
 
@@ -55,22 +60,22 @@ class TestSolverArgument:
         params, grads = jnp.ones(4), jnp.arange(4.0)
         ref, ref_state = _run(blr_full_rank(), params, grads)
         out, state = _run(blr_full_rank(solver=solver), params, grads)
-        assert jnp.allclose(out, ref, atol=1e-8)
+        assert jnp.allclose(out, ref, atol=TOL)
         mean, cov = get_posterior_full_rank(state, solver=solver)
         ref_mean, ref_cov = get_posterior_full_rank(ref_state)
-        assert jnp.allclose(mean, ref_mean, atol=1e-8)
-        assert jnp.allclose(cov, ref_cov, rtol=1e-6)
+        assert jnp.allclose(mean, ref_mean, atol=TOL)
+        assert jnp.allclose(cov, ref_cov, rtol=TOL)
 
     @pytest.mark.parametrize("solver", SOLVERS)
     def test_low_rank(self, solver):
         params, grads = jnp.ones(4), jnp.arange(4.0)
         ref, ref_state = _run(blr_low_rank(rank=2), params, grads)
         out, state = _run(blr_low_rank(rank=2, solver=solver), params, grads)
-        assert jnp.allclose(out, ref, atol=1e-8)
+        assert jnp.allclose(out, ref, atol=TOL)
         mean, cov = get_posterior_low_rank(state, solver=solver)
         ref_mean, ref_cov = get_posterior_low_rank(ref_state)
-        assert jnp.allclose(mean, ref_mean, atol=1e-8)
-        assert jnp.allclose(cov, ref_cov, rtol=1e-6)
+        assert jnp.allclose(mean, ref_mean, atol=TOL)
+        assert jnp.allclose(cov, ref_cov, rtol=TOL)
 
 
 class TestNewtonIndefinite:

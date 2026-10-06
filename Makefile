@@ -61,7 +61,7 @@ check-env-%:
 # ---------------------------------------------------------------------------
 # Phony declarations
 # ---------------------------------------------------------------------------
-.PHONY: help install lint format typecheck test test-fast test-slow test-cov \
+.PHONY: help install lint format typecheck test test-fast test-no-x64 test-slow test-cov \
         precommit build clean version docs docs-serve docs-deploy \
         gh-labels
 
@@ -137,6 +137,11 @@ test-fast: ## ⚡ Run fast unit tests (skips slow + integration; matches PR CI)
 	@printf "$(YELLOW)>>> Running fast tests...$(RESET)\n"
 	uv run pytest -v -n auto -m "not slow and not integration"
 	@printf "$(GREEN)>>> ✅ Fast tests passed!$(RESET)\n"
+
+test-no-x64: ## 🔢 Run the float32 lane: fast tests with x64 off (matches PR CI)
+	@printf "$(YELLOW)>>> Running fast tests with x64 off...$(RESET)\n"
+	OPTAX_BAYES_TEST_X64=0 uv run pytest -v -n auto -m "not slow and not integration"
+	@printf "$(GREEN)>>> ✅ No-x64 tests passed!$(RESET)\n"
 
 test-slow: ## 🐢 Run only the slow + integration tests
 	@printf "$(YELLOW)>>> Running slow/integration tests...$(RESET)\n"

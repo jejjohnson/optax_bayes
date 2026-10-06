@@ -113,6 +113,7 @@ testpaths = ["tests"]
 markers = [
     "slow: individually expensive tests (>~1.5s: heavy numerics, jit+grad+vmap sweeps)",
     "integration: end-to-end workflows (posterior recovery fits, long training loops)",
+    "x64_only(reason): needs float64; skipped in the no-x64 (float32) lane",
 ]
 
 [tool.coverage.run]

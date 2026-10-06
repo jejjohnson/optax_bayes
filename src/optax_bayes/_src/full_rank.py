@@ -120,7 +120,7 @@ def _blr_full_rank(
 
     def init_fn(params: jnp.ndarray) -> BLRFullRankState:
         d = params.shape[0]
-        lambda_0 = prior_precision * jnp.eye(d)
+        lambda_0 = prior_precision * jnp.eye(d, dtype=params.dtype)
         # The variational mean starts at the user's params (standard optax
         # drop-in semantics).  The prior mean still anchors every update
         # through eta_0 inside update_fn.
@@ -136,9 +136,17 @@ def _blr_full_rank(
         params: jnp.ndarray | None = None,
     ) -> tuple[jnp.ndarray, BLRFullRankState]:
         rho = learning_rate
+        # The state's dtype (set from the params at init) is the working
+        # dtype: inputs are cast to it so nothing promotes the state.
+        dtype = state.nat_mean.dtype
+        grads = jnp.asarray(grads, dtype)
         d = grads.shape[0]
-        lambda_0 = prior_precision * jnp.eye(d)
-        m0 = jnp.zeros(d) if prior_mean is None else prior_mean
+        lambda_0 = prior_precision * jnp.eye(d, dtype=dtype)
+        m0 = (
+            jnp.zeros(d, dtype)
+            if prior_mean is None
+            else jnp.asarray(prior_mean, dtype)
+        )
         eta_0 = lambda_0 @ m0
 
         # Current mean: m_t = Lambda_t^{-1} eta_t
@@ -147,11 +155,11 @@ def _blr_full_rank(
         )
 
         # Hessian estimate
-        h = _hessian_fn(m_t, grads)
+        h = jnp.asarray(_hessian_fn(m_t, grads), dtype)
 
         # Precision update
         new_precision = (1 - rho) * state.precision + rho * (lambda_0 - h)
-        new_precision = new_precision + damping * jnp.eye(d)
+        new_precision = new_precision + damping * jnp.eye(d, dtype=dtype)
 
         # Natural mean update
         grad_mu1 = grads - h @ m_t

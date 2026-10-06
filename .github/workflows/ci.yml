@@ -31,6 +31,22 @@ jobs:
       - name: Run fast tests
         run: uv run pytest -n auto -m "not slow and not integration"
 
+  # Every PR: the float32 lane. The suite otherwise runs with x64 on, so
+  # JAX's default configuration (float32, no float64) is never exercised.
+  # Tests marked x64_only (with a reason) are skipped.
+  test-no-x64:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+      - name: Run fast tests with x64 off
+        run: make test-no-x64
+
   # Pushes to main: fast tests across the version matrix, with coverage.
   test-main:
     if: github.event_name == 'push'
