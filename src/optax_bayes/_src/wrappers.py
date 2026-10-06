@@ -8,15 +8,19 @@ log-likelihood gradients as expected.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import jax
 import jax.numpy as jnp
-import lineax as lx
 import optax
 
 from optax_bayes._src.diagonal import blr_diagonal
 from optax_bayes._src.full_rank import blr_full_rank
 from optax_bayes._src.low_rank import blr_low_rank
+
+
+if TYPE_CHECKING:
+    from optax_bayes._src.linalg import Solver
 
 
 def _wrap_for_loss(inner: optax.GradientTransformation):
@@ -88,7 +92,7 @@ def blr_full_rank_for_loss(
     prior_mean: jnp.ndarray | None = None,
     hessian_estimator: str | Callable = "ggn",
     damping: float = 1e-6,
-    solver: lx.AbstractLinearSolver | None = None,
+    solver: Solver | None = None,
 ) -> optax.GradientTransformation:
     r"""Full-rank BLR accepting standard loss gradients.
 
@@ -104,7 +108,7 @@ def blr_full_rank_for_loss(
         hessian_estimator: ``"ggn"``, ``"identity"``, or a callable
             ``fn(mean, grads) -> (d, d)`` returning the **loss** Hessian.
         damping: Additive damping epsilon * I.
-        solver: Optional ``lineax`` solver.
+        solver: Optional ``lineax`` solver or ``gaussx`` solver strategy.
 
     Returns:
         An ``optax.GradientTransformation``.
@@ -128,7 +132,7 @@ def blr_low_rank_for_loss(
     prior_mean: jnp.ndarray | None = None,
     hessian_estimator: str | Callable = "ggn",
     damping: float = 1e-6,
-    solver: lx.AbstractLinearSolver | None = None,
+    solver: Solver | None = None,
 ) -> optax.GradientTransformation:
     r"""Low-rank BLR accepting standard loss gradients.
 
@@ -145,7 +149,7 @@ def blr_low_rank_for_loss(
         hessian_estimator: ``"ggn"``, ``"identity"``, or a callable
             ``fn(mean, grads) -> (d, d)`` returning the **loss** Hessian.
         damping: Additive damping on the diagonal.
-        solver: Optional ``lineax`` solver.
+        solver: Optional ``lineax`` solver or ``gaussx`` solver strategy.
 
     Returns:
         An ``optax.GradientTransformation``.

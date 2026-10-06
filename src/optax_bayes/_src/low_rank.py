@@ -13,52 +13,19 @@ Expects log-likelihood gradients.  Most users should use
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import jax.numpy as jnp
-import lineax as lx
 import optax
 
 from optax_bayes._src._optional import require_gaussx
 from optax_bayes._src.hessians import resolve_hessian_estimator_full
+from optax_bayes._src.linalg import low_rank_precision_operator, solve
 from optax_bayes._src.types import BLRLowRankState
 
 
-def _build_low_rank_operator(
-    d_diag: jnp.ndarray, u: jnp.ndarray
-) -> lx.AbstractLinearOperator:
-    """Build a gaussx LowRankUpdate operator for diag(D) + U U^T.
-
-    Args:
-        d_diag: Diagonal entries, shape (d,).
-        u: Low-rank factor, shape (d, r).
-
-    Returns:
-        A ``gaussx.LowRankUpdate`` operator.
-    """
-    gaussx = require_gaussx("low-rank BLR operators")
-    return gaussx.low_rank_plus_diag(d_diag, u)
-
-
-def _low_rank_solve(
-    d_diag: jnp.ndarray,
-    u: jnp.ndarray,
-    b: jnp.ndarray,
-    solver: lx.AbstractLinearSolver | None = None,
-) -> jnp.ndarray:
-    """Solve (diag(D) + U U^T) x = b via gaussx.
-
-    Args:
-        d_diag: Diagonal entries, shape (d,).
-        u: Low-rank factor, shape (d, r).
-        b: Right-hand side, shape (d,).
-        solver: Optional gaussx solver strategy.
-
-    Returns:
-        Solution x, shape (d,).
-    """
-    gaussx = require_gaussx("low-rank BLR solves")
-    op = _build_low_rank_operator(d_diag, u)
-    return gaussx.solve(op, b, solver=solver)
+if TYPE_CHECKING:
+    from optax_bayes._src.linalg import Solver
 
 
 def _truncate_to_rank(u: jnp.ndarray, rank: int) -> jnp.ndarray:
@@ -85,7 +52,7 @@ def blr_low_rank(
     prior_mean: jnp.ndarray | None = None,
     hessian_estimator: str | Callable = "ggn",
     damping: float = 1e-6,
-    solver: lx.AbstractLinearSolver | None = None,
+    solver: Solver | None = None,
 ) -> optax.GradientTransformation:
     r"""Low-rank Gaussian BLR as an optax transform.
 
@@ -119,9 +86,10 @@ def blr_low_rank(
             ``"identity"`` (zero), or a callable
             ``fn(mean, grads) -> (d, d)``.
         damping: Additive damping on the diagonal after each update.
-        solver: A ``gaussx`` solver strategy (e.g.
-            ``gaussx.DenseSolver()``, ``gaussx.CGSolver()``).
-            ``None`` uses the default ``gaussx.solve`` dispatch.
+        solver: A ``lineax`` solver (e.g. ``lx.Cholesky()``) or a
+            ``gaussx`` solver strategy (e.g. ``gaussx.DenseSolver()``,
+            ``gaussx.CGSolver()``). ``None`` uses ``gaussx.solve``'s
+            structural dispatch.
 
     Returns:
         An ``optax.GradientTransformation``.
@@ -164,11 +132,10 @@ def blr_low_rank(
         eta_0 = d0 * m0
 
         # Current mean via gaussx structured solve
-        m_t = _low_rank_solve(
-            state.diag_precision,
-            state.low_rank_factor,
+        m_t = solve(
+            low_rank_precision_operator(state.diag_precision, state.low_rank_factor),
             state.nat_mean,
-            solver=solver,
+            solver,
         )
 
         # Decompose -H as diag(-H) + off_diag(-H).  We put the diagonal
@@ -205,7 +172,9 @@ def blr_low_rank(
         new_nat_mean = (1 - rho) * state.nat_mean + rho * (eta_0 + grad_mu1)
 
         # Recover new mean via gaussx structured solve
-        new_mean = _low_rank_solve(new_diag, new_u, new_nat_mean, solver=solver)
+        new_mean = solve(
+            low_rank_precision_operator(new_diag, new_u), new_nat_mean, solver
+        )
         updates = new_mean - m_t
 
         new_state = BLRLowRankState(
