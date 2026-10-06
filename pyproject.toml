@@ -31,13 +31,13 @@ dependencies = [
 # Structured linear-algebra backend for the full-rank and low-rank
 # transforms. The diagonal and IVON surface works without it.
 gaussx = [
-    "gaussx @ git+https://github.com/jejjohnson/gaussx@cd6264c92d32f433515d3efb06a0672a02280339",
+    "gaussx @ git+https://github.com/jejjohnson/gaussx@74599b66a0cd0ea18fe1f718584d80571a57d4c6",
 ]
 equinox = [
     "equinox>=0.11",
 ]
 all = [
-    "gaussx @ git+https://github.com/jejjohnson/gaussx@cd6264c92d32f433515d3efb06a0672a02280339",
+    "gaussx @ git+https://github.com/jejjohnson/gaussx@74599b66a0cd0ea18fe1f718584d80571a57d4c6",
     "equinox>=0.11",
 ]
 
@@ -52,7 +52,7 @@ dev = [
     "pytest-xdist>=3.6.1",
     "pre-commit>=4.5.1",
     # Tests exercise the full-rank / low-rank gaussx-backed paths.
-    "gaussx @ git+https://github.com/jejjohnson/gaussx@cd6264c92d32f433515d3efb06a0672a02280339",
+    "gaussx @ git+https://github.com/jejjohnson/gaussx@74599b66a0cd0ea18fe1f718584d80571a57d4c6",
 ]
 lint = [
     "ruff>=0.15.10",
