@@ -7,11 +7,33 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
+    # An explicit lowercase prefix makes Dependabot write "chore(deps): bump
+    # ..." instead of guessing the style from history, where it sometimes
+    # capitalises the subject and fails the PR-title check.
+    commit-message:
+      prefix: "chore(deps)"
 
-  - package-ecosystem: "pip"
+  # "uv" updates uv.lock as well as pyproject.toml; "pip" cannot, so its PRs
+  # fail CI's `uv sync --locked`.
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
     labels:
       - "dependencies"
       - "python"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      # The JAX stack usually has to move together.
+      jax-stack:
+        patterns:
+          - "jax"
+          - "jaxlib"
+          - "optax"
+          - "equinox"
+          - "lineax"
+          - "jaxtyping"
+      dev-tools:
+        dependency-type: "development"
