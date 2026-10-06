@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.3](https://github.com/jejjohnson/optax_bayes/compare/v0.0.2...v0.0.3) (2026-10-06)
+
+
+### Bug Fixes
+
+* keep the params' dtype through the full-rank and low-rank transforms ([#52](https://github.com/jejjohnson/optax_bayes/issues/52)) ([5e423bb](https://github.com/jejjohnson/optax_bayes/commit/5e423bbbb5a7d81dec42f164f3298876905fa67d))
+* tag BLR precisions PSD and accept gaussx solver strategies ([#51](https://github.com/jejjohnson/optax_bayes/issues/51)) ([cbc5086](https://github.com/jejjohnson/optax_bayes/commit/cbc5086f8ba1a5e6869a17c36db4fbfee8c892fb))
+
+
+### Performance Improvements
+
+* SLANG low-rank update, O(d r^2) per step instead of O(d^3) ([#53](https://github.com/jejjohnson/optax_bayes/issues/53)) ([ab8f89d](https://github.com/jejjohnson/optax_bayes/commit/ab8f89d82995590d0ec20d07f373a78f0fa87dae))
+
 ## [0.0.2](https://github.com/jejjohnson/optax_bayes/compare/v0.0.1...v0.0.2) (2026-06-11)
 
 
