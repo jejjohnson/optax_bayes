@@ -53,14 +53,19 @@ class TestLowRankInvalidEstimator:
 
 class TestLowRankQuadratic:
     def test_ggn_loss_decreases(self):
-        """Low-rank GGN drives the loss down."""
-        d = 5
+        """Low-rank GGN drives the loss down.
+
+        Same setting as the full-rank test: the rank-1 outer product
+        H = -g g^T is unstable here under a near-flat prior, exactly as
+        it is for ``blr_full_rank``.
+        """
+        d = 3
         theta_star = jnp.ones(d) * 2.0
 
         def loss_fn(theta):
             return 0.5 * jnp.sum((theta - theta_star) ** 2)
 
-        opt = blr_low_rank_for_loss(learning_rate=0.1, rank=3, prior_precision=1e-4)
+        opt = blr_low_rank_for_loss(learning_rate=0.1, rank=2, prior_precision=1e-2)
         theta = jnp.zeros(d)
         state = opt.init(theta)
         initial_loss = loss_fn(theta)
@@ -73,7 +78,7 @@ class TestLowRankQuadratic:
             theta = optax.apply_updates(theta, updates)
             return (theta, state), None
 
-        (theta, state), _ = jax.lax.scan(step, (theta, state), None, length=100)
+        (theta, state), _ = jax.lax.scan(step, (theta, state), None, length=50)
 
         assert loss_fn(theta) < initial_loss * 0.1
         assert jnp.all(jnp.isfinite(theta))
@@ -109,6 +114,120 @@ class TestLowRankQuadratic:
         m, _ = get_posterior_low_rank(state)
         analytic_m = theta_star / (1 + s0)
         assert jnp.allclose(m, analytic_m, atol=0.1)
+
+
+# ── SLANG update ─────────────────────────────────────────────────
+
+
+def _exact_precision_problem(d=4):
+    """A fixed concave quadratic log-likelihood with exact Hessian -A."""
+    key = jax.random.key(1)
+    x = jax.random.normal(key, (3 * d, d)) / jnp.sqrt(3 * d)
+    a_mat = x.T @ x
+    return a_mat, 1.0 * jnp.eye(d) + a_mat
+
+
+class TestLowRankSLANG:
+    def _fit(self, rank, n_steps=200):
+        a_mat, post_precision = _exact_precision_problem()
+        opt = blr_low_rank(
+            learning_rate=0.3,
+            rank=rank,
+            prior_precision=1.0,
+            hessian_estimator=lambda mean, grads: -a_mat,
+            damping=0.0,
+        )
+        params = jnp.zeros(4)
+        state = opt.init(params)
+        for _ in range(n_steps):
+            updates, state = opt.update(-a_mat @ params, state, params)
+            params = params + updates
+        precision = jnp.diag(state.diag_precision) + (
+            state.low_rank_factor @ state.low_rank_factor.T
+        )
+        return precision, post_precision
+
+    def test_full_rank_recovers_exact_precision(self):
+        """With rank >= d nothing is truncated, so the update is exact."""
+        precision, post_precision = self._fit(rank=4)
+        assert jnp.allclose(precision, post_precision, atol=1e-5)
+
+    def test_truncation_keeps_the_diagonal_exact(self):
+        """Below full rank, the discarded diagonal is folded into D."""
+        precision, post_precision = self._fit(rank=2)
+        assert jnp.allclose(jnp.diag(precision), jnp.diag(post_precision), atol=1e-5)
+        assert not jnp.allclose(precision, post_precision, atol=1e-3)
+
+    @pytest.mark.parametrize(
+        ("hessian_estimator", "prior_precision", "n_steps"),
+        [
+            # Exact Hessian, informative prior: contractive, so compare long.
+            pytest.param(
+                lambda mean, grads: jnp.array([[2.0, 0.5], [0.5, 1.0]]),
+                1.0,
+                30,
+                id="exact",
+            ),
+            # The rank-1 GGN amplifies round-off ~8x per step on this toy
+            # problem (in both transforms), so compare only a few steps.
+            pytest.param(
+                "ggn",
+                1e-2,
+                5,
+                id="ggn",
+                marks=pytest.mark.x64_only(
+                    reason="the GGN dynamics amplify float32 round-off past 1e-6"
+                ),
+            ),
+        ],
+    )
+    def test_rank_d_matches_full_rank(
+        self, hessian_estimator, prior_precision, n_steps
+    ):
+        """Untruncated, the low-rank transform is the full-rank BLR."""
+        theta_star = jnp.array([2.0, -1.0])
+        kwargs = dict(
+            learning_rate=0.1,
+            prior_precision=prior_precision,
+            hessian_estimator=hessian_estimator,
+            damping=0.0,
+        )
+        full = optax_bayes.blr_full_rank_for_loss(**kwargs)
+        low = blr_low_rank_for_loss(rank=2, **kwargs)
+        theta_f = theta_l = jnp.zeros(2)
+        state_f, state_l = full.init(theta_f), low.init(theta_l)
+        for _ in range(n_steps):
+            u_f, state_f = full.update(theta_f - theta_star, state_f)
+            u_l, state_l = low.update(theta_l - theta_star, state_l)
+            theta_f, theta_l = theta_f + u_f, theta_l + u_l
+        assert jnp.allclose(theta_l, theta_f, rtol=1e-6, atol=1e-6)
+
+    def test_ggn_never_eigendecomposes(self):
+        """The built-in estimators stay O(d r^2): no dense eigh per step."""
+        opt = blr_low_rank(rank=2)
+        params = jnp.ones(6)
+        state = opt.init(params)
+        jaxpr = str(jax.make_jaxpr(opt.update)(params, state, params))
+        assert "eigh" not in jaxpr
+
+    def test_ggn_large_d_does_not_form_dense_matrices(self):
+        """A (d, d) array would be 4e10 entries here; the step must not need one."""
+        d = 200_000
+        opt = blr_low_rank(rank=3)
+        params = jnp.zeros(d)
+        state = opt.init(params)
+        out = jax.eval_shape(opt.update, params, state, params)
+        largest = max(
+            leaf.size for leaf in jax.tree.leaves(out) if hasattr(leaf, "size")
+        )
+        assert largest <= 3 * d
+        jaxpr = jax.make_jaxpr(opt.update)(params, state, params)
+        assert all(
+            v.aval.size <= 4 * d
+            for eqn in jaxpr.eqns
+            for v in eqn.outvars
+            if hasattr(v.aval, "size")
+        )
 
 
 # ── Loss wrapper sign flip ───────────────────────────────────────

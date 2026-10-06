@@ -7,6 +7,12 @@ Diagonal estimators:
 Full-rank estimators:
 - ``ggn_outer``: Rank-1 outer product, H = -g g^T (always NSD).
 - ``identity_hessian_full``: H = 0 (d x d zero matrix).
+
+Low-rank estimators return a factor G (d, k) with -H = G G^T, so the
+low-rank transform never forms a (d, d) matrix for the built-in choices:
+- ``"ggn"``: G = g (k = 1).
+- ``"identity"``: G is empty (k = 0).
+- callable: the positive eigen-part of a dense -H (k = d, O(d^3)).
 """
 
 from __future__ import annotations
@@ -131,3 +137,62 @@ def resolve_hessian_estimator_full(
         f"Unknown hessian_estimator: {hessian_estimator!r}. "
         "Supported strings: 'ggn', 'identity', or pass a callable."
     )
+
+
+# ── Low-rank estimators (factor form) ───────────────────────────
+
+
+def psd_factor(neg_hessian: Float[Array, ...]) -> Float[Array, ...]:
+    r"""Factor the positive part of a symmetric matrix.
+
+    Returns $G = V \sqrt{\max(\Lambda, 0)}$ from the eigendecomposition
+    $-H = V \Lambda V^\top$, so $G G^\top$ is the closest PSD matrix to
+    $-H$. Negative curvature (where $H$ is not NSD) is dropped, because it
+    would make the precision indefinite.
+
+    Args:
+        neg_hessian: Symmetric matrix $-H$, shape (d, d).
+
+    Returns:
+        Factor $G$, shape (d, d).
+    """
+    eigvals, eigvecs = jnp.linalg.eigh(neg_hessian)
+    return eigvecs * jnp.sqrt(jnp.maximum(eigvals, 0.0))[None, :]
+
+
+def resolve_hessian_factor_low_rank(
+    hessian_estimator: str | Callable,
+) -> Callable:
+    """Resolve a low-rank hessian_estimator argument to factor form.
+
+    - ``"ggn"``: ``G = g[:, None]``, so ``-H = g g^T`` (rank 1).
+    - ``"identity"``: an empty ``(d, 0)`` factor, ``H = 0``.
+    - callable: ``fn(mean, grads) -> (d, d)`` Hessian, factored with
+      :func:`psd_factor` (O(d^3); the built-in strings avoid it).
+
+    Args:
+        hessian_estimator: String or callable.
+
+    Returns:
+        A callable ``(mean, grads) -> G`` with ``G`` of shape (d, k).
+
+    Raises:
+        ValueError: If string is not recognised.
+        TypeError: If not a string or callable.
+    """
+    if isinstance(hessian_estimator, str):
+        if hessian_estimator == "ggn":
+            return lambda mean, grads: grads[:, None]
+        if hessian_estimator == "identity":
+            return lambda mean, grads: jnp.zeros((grads.shape[0], 0), grads.dtype)
+        raise ValueError(
+            f"Unknown hessian_estimator: {hessian_estimator!r}. "
+            "Supported strings: 'ggn', 'identity', or pass a callable."
+        )
+    if not callable(hessian_estimator):
+        raise TypeError(
+            "hessian_estimator must be a string or callable, "
+            f"got {type(hessian_estimator).__name__}"
+        )
+    hessian_fn = hessian_estimator
+    return lambda mean, grads: psd_factor(-hessian_fn(mean, grads))

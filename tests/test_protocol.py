@@ -90,8 +90,14 @@ class TestScanTrainingLoop:
         assert jnp.linalg.norm(final_params) < jnp.linalg.norm(params)
 
     def test_low_rank_scan(self):
+        # As for full rank: exact loss Hessian and an informative prior.
         params = jnp.array([2.0, -1.0, 0.5, 1.5])
-        opt = optax_bayes.blr_low_rank_for_loss(learning_rate=0.3, rank=2)
+        opt = optax_bayes.blr_low_rank_for_loss(
+            learning_rate=0.3,
+            rank=2,
+            prior_precision=1.0,
+            hessian_estimator=lambda mean, grads: jnp.eye(4),
+        )
         state = opt.init(params)
 
         def step(carry, _):

@@ -19,7 +19,7 @@ import jax.numpy as jnp
 import optax
 
 from optax_bayes._src._optional import require_gaussx
-from optax_bayes._src.hessians import resolve_hessian_estimator_full
+from optax_bayes._src.hessians import resolve_hessian_factor_low_rank
 from optax_bayes._src.linalg import low_rank_precision_operator, solve
 from optax_bayes._src.types import BLRLowRankState
 
@@ -28,21 +28,25 @@ if TYPE_CHECKING:
     from optax_bayes._src.linalg import Solver
 
 
-def _truncate_to_rank(u: jnp.ndarray, rank: int) -> jnp.ndarray:
-    """Truncate U from (d, r+k) to (d, rank) via SVD.
+def _truncate_to_rank(u: jnp.ndarray, rank: int) -> tuple[jnp.ndarray, jnp.ndarray]:
+    """Truncate U from (d, k) to (d, rank) via a thin SVD.
 
     Keeps the top-``rank`` singular vectors scaled by singular values,
-    so that U_trunc @ U_trunc^T approximates U @ U^T.
+    the best rank-``rank`` approximation of U U^T. Costs O(d k^2).
 
     Args:
-        u: Factor matrix, shape (d, r+k) where r+k > rank.
-        rank: Target rank.
+        u: Factor matrix, shape (d, k).
+        rank: Target rank, at most ``min(d, k)``.
 
     Returns:
-        Truncated factor, shape (d, rank).
+        Tuple ``(u_trunc, residual_diag)``: the (d, rank) factor and
+        ``diag(U U^T - U_trunc U_trunc^T)`` (non-negative), the diagonal
+        of the discarded part.
     """
     p, s, _qt = jnp.linalg.svd(u, full_matrices=False)  # ty: ignore[invalid-argument-type, unknown-argument, not-iterable]
-    return p[:, :rank] * s[None, :rank]
+    scaled = p * s[None, :]
+    residual_diag = jnp.sum(scaled[:, rank:] ** 2, axis=1)
+    return scaled[:, :rank], residual_diag
 
 
 def blr_low_rank(
@@ -63,15 +67,36 @@ def blr_low_rank(
     identity through ``gaussx`` structured operators (requires the
     optional ``gaussx`` extra).
 
-    Each step splits the Hessian estimate $-H_t$ into its diagonal
-    (absorbed into $D$) and the positive eigen-part of its
-    off-diagonal remainder (appended to $U$); the augmented factor is
-    truncated back to rank $r$ via SVD so that
-    $U_{t+1} U_{t+1}^\top \approx (1-\rho)\, U_t U_t^\top + \rho\,
-    \text{(new curvature)}$. The natural mean follows the standard BLR
-    update. The state initialises its mean at the params passed to
-    ``init``; ``prior_mean`` and ``prior_precision`` anchor every
-    update.
+    The update is SLANG's (Mishkin et al., 2018). With the curvature in
+    factor form $-H_t = G_t G_t^\top$ ($G_t = g_t$ for ``"ggn"``), the
+    target precision $(1-\rho)\Lambda_t + \rho(\Lambda_0 - H_t)$ is
+    $\operatorname{diag}((1-\rho) D_t + \rho D_0) + \tilde U \tilde U^\top$
+    with $\tilde U = [\sqrt{1-\rho}\, U_t,\ \sqrt{\rho}\, G_t]$. A thin
+    SVD keeps the top $r$ directions of $\tilde U$, and the diagonal of
+    the discarded part is added to $D$:
+
+    $$
+    \begin{aligned}
+    U_{t+1} &= \operatorname{top}_r(\tilde U) \\
+    D_{t+1} &= (1-\rho) D_t + \rho D_0
+        + \operatorname{diag}(\tilde U \tilde U^\top - U_{t+1} U_{t+1}^\top)
+        + \epsilon
+    \end{aligned}
+    $$
+
+    so the diagonal of the precision is updated exactly, and the whole
+    precision is exact when $r \ge d$. A step costs $O(d (r + k)^2)$ for
+    a rank-$k$ factor: $O(d r^2)$ for ``"ggn"``. The mean takes the
+    mean-form Gaussian BLR step
+
+    $$
+    m_{t+1} = m_t + \rho\, \Lambda_{t+1}^{-1} \big(g_t - D_0 (m_t - m_0)\big),
+    $$
+
+    which matches the natural-mean recursion of ``blr_full_rank`` whenever
+    the precision is exact and stays stable when it is truncated. The
+    state initialises its mean at the params passed to ``init``;
+    ``prior_mean`` and ``prior_precision`` anchor every update.
 
     **This API expects log-likelihood gradients.**  For standard loss
     minimisation, use
@@ -84,8 +109,11 @@ def blr_low_rank(
         prior_mean: Prior mean vector (d,), or None for zeros.
         hessian_estimator: ``"ggn"`` (outer product ``-g g^T``),
             ``"identity"`` (zero), or a callable
-            ``fn(mean, grads) -> (d, d)``.
-        damping: Additive damping on the diagonal after each update.
+            ``fn(mean, grads) -> (d, d)``. A callable's dense Hessian is
+            factored by eigendecomposition, $O(d^3)$ per step, keeping
+            only its negative-definite part.
+        damping: Additive damping epsilon on the diagonal after each
+            update, as in ``blr_full_rank``.
         solver: A ``lineax`` solver (e.g. ``lx.Cholesky()``) or a
             ``gaussx`` solver strategy (e.g. ``gaussx.DenseSolver()``,
             ``gaussx.CGSolver()``). ``None`` uses ``gaussx.solve``'s
@@ -99,7 +127,7 @@ def blr_low_rank(
             installed.
     """
     require_gaussx("blr_low_rank")
-    _hessian_fn = resolve_hessian_estimator_full(hessian_estimator)
+    _factor_fn = resolve_hessian_factor_low_rank(hessian_estimator)
 
     def init_fn(params: jnp.ndarray) -> BLRLowRankState:
         d = params.shape[0]
@@ -137,7 +165,6 @@ def blr_low_rank(
             if prior_mean is None
             else jnp.asarray(prior_mean, dtype)
         )
-        eta_0 = d0 * m0
 
         # Current mean via gaussx structured solve
         m_t = solve(
@@ -146,44 +173,31 @@ def blr_low_rank(
             solver,
         )
 
-        # Decompose -H as diag(-H) + off_diag(-H).  We put the diagonal
-        # into D (well-conditioned) and the off-diagonal into U (via the
-        # positive eigenvectors).  This O(d^3) eigendecomposition is a
-        # scalability bottleneck for large d; a rank-1 GGN-specific fast
-        # path could be added later but requires different numerics.
-        h = jnp.asarray(_hessian_fn(m_t, grads), dtype)
-        h_m_t = h @ m_t
+        # Curvature in factor form, -H = G G^T, with G of shape (d, k).
+        g_factor = jnp.asarray(_factor_fn(m_t, grads), dtype)
 
-        # Diagonal precision update
-        new_diag = (1 - rho) * state.diag_precision + rho * (d0 - jnp.diag(h))
-        new_diag = jnp.maximum(new_diag, damping)
-
-        # Low-rank factor update: extract positive eigenvectors of -H's
-        # off-diagonal part.
-        neg_h = -h
-        neg_h_offdiag = neg_h - jnp.diag(jnp.diag(neg_h))
-        eigvals, eigvecs = jnp.linalg.eigh(neg_h_offdiag)
-        pos_mask = eigvals > 0
-        h_factor = eigvecs * jnp.sqrt(jnp.maximum(eigvals, 0.0))[None, :]
-        h_factor = jnp.where(pos_mask[None, :], h_factor, 0.0)
-
-        # Low-rank factor update:
-        # U_{new} U_{new}^T ≈ (1-rho) U U^T + rho * h_factor @ h_factor^T
-        u_scaled = jnp.sqrt(jnp.maximum(1 - rho, 0.0)) * state.low_rank_factor
-        h_scaled = jnp.sqrt(rho) * h_factor
-        u_aug = jnp.concatenate([u_scaled, h_scaled], axis=1)
-
-        new_u = _truncate_to_rank(u_aug, min(rank, d))
-
-        # Natural mean update
-        grad_mu1 = grads - h_m_t
-        new_nat_mean = (1 - rho) * state.nat_mean + rho * (eta_0 + grad_mu1)
-
-        # Recover new mean via gaussx structured solve
-        new_mean = solve(
-            low_rank_precision_operator(new_diag, new_u), new_nat_mean, solver
+        # SLANG precision update: stack the decayed factor with the new
+        # curvature, keep the top-r directions, and fold the diagonal of
+        # what was discarded into D.
+        u_aug = jnp.concatenate(
+            [
+                jnp.sqrt(jnp.maximum(1 - rho, 0.0)) * state.low_rank_factor,
+                jnp.sqrt(rho) * g_factor,
+            ],
+            axis=1,
         )
-        updates = new_mean - m_t
+        new_u, residual_diag = _truncate_to_rank(u_aug, min(rank, d))
+        new_diag = (1 - rho) * state.diag_precision + rho * d0 + residual_diag + damping
+
+        # Mean update in mean form, m += rho * Lambda^{-1} (g - D_0 (m - m_0)).
+        # It equals the natural-mean recursion when the precision is exact,
+        # but stays a well-defined preconditioned step after truncation;
+        # the recursion would instead amplify the truncation error by
+        # Lambda^{-1} along weakly curved directions.
+        new_op = low_rank_precision_operator(new_diag, new_u)
+        updates = solve(new_op, rho * (grads - d0 * (m_t - m0)), solver)
+        new_mean = m_t + updates
+        new_nat_mean = new_op.mv(new_mean)
 
         new_state = BLRLowRankState(
             diag_precision=new_diag,
