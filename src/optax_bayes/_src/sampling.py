@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import jax
 import jax.numpy as jnp
-import lineax as lx
 import optax
 
 from optax_bayes._src._optional import require_gaussx
-from optax_bayes._src.low_rank import _build_low_rank_operator
+from optax_bayes._src.linalg import (
+    low_rank_precision_operator,
+    precision_operator,
+    solve,
+)
 from optax_bayes._src.types import BLRDiagState, BLRFullRankState, BLRLowRankState
 
 
@@ -74,9 +77,8 @@ def sample_posterior_full_rank(
     Returns:
         Sampled parameter vector, shape (d,).
     """
-    gaussx = require_gaussx("sample_posterior_full_rank")
-    op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)
-    mean = gaussx.solve(op, state.nat_mean)
+    require_gaussx("sample_posterior_full_rank")
+    mean = solve(precision_operator(state.precision), state.nat_mean)
 
     # Cholesky of precision: Lambda = L L^T
     chol = jnp.linalg.cholesky(state.precision)
@@ -114,9 +116,9 @@ def sample_posterior_low_rank(
     Returns:
         Sampled parameter vector, shape (d,).
     """
-    gaussx = require_gaussx("sample_posterior_low_rank")
-    op = _build_low_rank_operator(state.diag_precision, state.low_rank_factor)
-    mean = gaussx.solve(op, state.nat_mean)
+    require_gaussx("sample_posterior_low_rank")
+    op = low_rank_precision_operator(state.diag_precision, state.low_rank_factor)
+    mean = solve(op, state.nat_mean)
 
     d = state.diag_precision.shape[0]
     r = state.low_rank_factor.shape[1]
@@ -129,6 +131,6 @@ def sample_posterior_low_rank(
     z = jnp.sqrt(state.diag_precision) * eps_d + state.low_rank_factor @ eps_r
 
     # y = Lambda^{-1} z ~ N(0, Lambda^{-1}) via Woodbury (gaussx)
-    y = gaussx.solve(op, z)
+    y = solve(op, z)
 
     return mean + y

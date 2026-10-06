@@ -4,8 +4,8 @@ Operates on flat parameter vectors theta in R^d.  The precision
 Lambda is a (d, d) matrix, and the natural mean eta = Lambda @ m
 is a (d,) vector.
 
-Uses ``gaussx.solve`` for the precision solve, which dispatches
-to structure-aware solvers via lineax.
+Uses ``gaussx.solve`` for the PSD-tagged precision solve, which
+dispatches to a Cholesky solve via lineax.
 
 Expects log-likelihood gradients.  Most users should use
 ``blr_full_rank_for_loss`` from the wrappers module instead.
@@ -14,14 +14,19 @@ Expects log-likelihood gradients.  Most users should use
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import jax.numpy as jnp
-import lineax as lx
 import optax
 
 from optax_bayes._src._optional import require_gaussx
 from optax_bayes._src.hessians import resolve_hessian_estimator_full
+from optax_bayes._src.linalg import precision_operator, solve
 from optax_bayes._src.types import BLRFullRankState
+
+
+if TYPE_CHECKING:
+    from optax_bayes._src.linalg import Solver
 
 
 def blr_full_rank(
@@ -30,7 +35,7 @@ def blr_full_rank(
     prior_mean: jnp.ndarray | None = None,
     hessian_estimator: str | Callable = "ggn",
     damping: float = 1e-6,
-    solver: lx.AbstractLinearSolver | None = None,
+    solver: Solver | None = None,
 ) -> optax.GradientTransformation:
     r"""Full-rank Gaussian BLR as an optax transform.
 
@@ -70,9 +75,10 @@ def blr_full_rank(
             ``fn(mean, grads) -> (d, d)``.
         damping: Additive damping epsilon * I after each precision
             update.
-        solver: A ``gaussx`` solver strategy (e.g.
-            ``gaussx.DenseSolver()``, ``gaussx.CGSolver()``).
-            ``None`` uses the default ``gaussx.solve`` dispatch.
+        solver: A ``lineax`` solver (e.g. ``lx.Cholesky()``) or a
+            ``gaussx`` solver strategy (e.g. ``gaussx.DenseSolver()``,
+            ``gaussx.CGSolver()``). ``None`` uses ``gaussx.solve``'s
+            structural dispatch.
 
     Returns:
         An ``optax.GradientTransformation``.
@@ -81,7 +87,35 @@ def blr_full_rank(
         ImportError: If the optional ``gaussx`` dependency is not
             installed.
     """
-    gaussx = require_gaussx("blr_full_rank")
+    return _blr_full_rank(
+        learning_rate=learning_rate,
+        prior_precision=prior_precision,
+        prior_mean=prior_mean,
+        hessian_estimator=hessian_estimator,
+        damping=damping,
+        solver=solver,
+        psd=True,
+    )
+
+
+def _blr_full_rank(
+    *,
+    learning_rate: float,
+    prior_precision: float,
+    prior_mean: jnp.ndarray | None,
+    hessian_estimator: str | Callable,
+    damping: float,
+    solver: Solver | None,
+    psd: bool,
+) -> optax.GradientTransformation:
+    """Build the full-rank transform; see :func:`blr_full_rank`.
+
+    ``psd`` tags the precision positive semi-definite (Cholesky solves).
+    The BLR contract $H_t \\preceq 0$ guarantees it; ``newton`` passes
+    ``False`` because an exact Hessian may be indefinite away from a
+    maximum, where only a general (LU) solve is valid.
+    """
+    require_gaussx("blr_full_rank")
     _hessian_fn = resolve_hessian_estimator_full(hessian_estimator)
 
     def init_fn(params: jnp.ndarray) -> BLRFullRankState:
@@ -108,8 +142,9 @@ def blr_full_rank(
         eta_0 = lambda_0 @ m0
 
         # Current mean: m_t = Lambda_t^{-1} eta_t
-        op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)
-        m_t = gaussx.solve(op, state.nat_mean, solver=solver)
+        m_t = solve(
+            precision_operator(state.precision, psd=psd), state.nat_mean, solver
+        )
 
         # Hessian estimate
         h = _hessian_fn(m_t, grads)
@@ -123,8 +158,9 @@ def blr_full_rank(
         new_nat_mean = (1 - rho) * state.nat_mean + rho * (eta_0 + grad_mu1)
 
         # Recover mean and compute update
-        new_op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(new_precision)
-        new_mean = gaussx.solve(new_op, new_nat_mean, solver=solver)
+        new_mean = solve(
+            precision_operator(new_precision, psd=psd), new_nat_mean, solver
+        )
         updates = new_mean - m_t
 
         new_state = BLRFullRankState(

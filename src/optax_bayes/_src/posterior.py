@@ -2,14 +2,24 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import jax
 import jax.numpy as jnp
-import lineax as lx
 import optax
 
 from optax_bayes._src._optional import require_gaussx
-from optax_bayes._src.low_rank import _build_low_rank_operator
+from optax_bayes._src.linalg import (
+    inverse_matrix,
+    low_rank_precision_operator,
+    precision_operator,
+    solve,
+)
 from optax_bayes._src.types import BLRDiagState, BLRFullRankState, BLRLowRankState
+
+
+if TYPE_CHECKING:
+    from optax_bayes._src.linalg import Solver
 
 
 def get_posterior_diagonal(
@@ -38,7 +48,7 @@ def get_posterior_diagonal(
 
 def get_posterior_full_rank(
     state: BLRFullRankState,
-    solver: lx.AbstractLinearSolver | None = None,
+    solver: Solver | None = None,
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
     r"""Extract the approximate posterior from full-rank BLR state.
 
@@ -50,23 +60,21 @@ def get_posterior_full_rank(
     Args:
         state: A ``BLRFullRankState`` from ``blr_full_rank`` or
             ``blr_full_rank_for_loss``.
-        solver: Optional ``lineax`` solver (e.g. ``lx.AutoLinearSolver()``).
+        solver: Optional ``lineax`` solver (e.g. ``lx.Cholesky()``) or
+            ``gaussx`` solver strategy (e.g. ``gaussx.DenseSolver()``).
 
     Returns:
         Tuple ``(mean, covariance)`` where mean is (d,) and
         covariance is (d, d).
     """
-    gaussx = require_gaussx("get_posterior_full_rank")
-    op: lx.AbstractLinearOperator = lx.MatrixLinearOperator(state.precision)
-    mean = gaussx.solve(op, state.nat_mean, solver=solver)
-    inv_op = gaussx.inv(op, solver=solver)
-    covariance = inv_op.as_matrix()
-    return mean, covariance
+    require_gaussx("get_posterior_full_rank")
+    op = precision_operator(state.precision)
+    return solve(op, state.nat_mean, solver), inverse_matrix(op, solver)
 
 
 def get_posterior_low_rank(
     state: BLRLowRankState,
-    solver: lx.AbstractLinearSolver | None = None,
+    solver: Solver | None = None,
 ) -> tuple[jnp.ndarray, jnp.ndarray]:
     r"""Extract the approximate posterior from low-rank BLR state.
 
@@ -80,15 +88,12 @@ def get_posterior_low_rank(
     Args:
         state: A ``BLRLowRankState`` from ``blr_low_rank`` or
             ``blr_low_rank_for_loss``.
-        solver: Optional ``gaussx`` solver strategy.
+        solver: Optional ``lineax`` solver or ``gaussx`` solver strategy.
 
     Returns:
         Tuple ``(mean, covariance)`` where mean is (d,) and
         covariance is (d, d).
     """
-    gaussx = require_gaussx("get_posterior_low_rank")
-    op = _build_low_rank_operator(state.diag_precision, state.low_rank_factor)
-    mean = gaussx.solve(op, state.nat_mean, solver=solver)
-    inv_op = gaussx.inv(op, solver=solver)
-    covariance = inv_op.as_matrix()
-    return mean, covariance
+    require_gaussx("get_posterior_low_rank")
+    op = low_rank_precision_operator(state.diag_precision, state.low_rank_factor)
+    return solve(op, state.nat_mean, solver), inverse_matrix(op, solver)
