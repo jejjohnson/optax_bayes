@@ -107,8 +107,8 @@ def blr_low_rank(
         # vectors, so a rank > d request would be silently truncated later
         # and produce a shape mismatch.
         effective_rank = min(rank, d)
-        d0 = jnp.full(d, prior_precision)
-        u0 = jnp.zeros((d, effective_rank))
+        d0 = jnp.full(d, prior_precision, params.dtype)
+        u0 = jnp.zeros((d, effective_rank), params.dtype)
         # The variational mean starts at the user's params (standard optax
         # drop-in semantics).  The prior mean still anchors every update
         # through eta_0 inside update_fn.
@@ -126,9 +126,17 @@ def blr_low_rank(
         params: jnp.ndarray | None = None,
     ) -> tuple[jnp.ndarray, BLRLowRankState]:
         rho = learning_rate
+        # The state's dtype (set from the params at init) is the working
+        # dtype: inputs are cast to it so nothing promotes the state.
+        dtype = state.nat_mean.dtype
+        grads = jnp.asarray(grads, dtype)
         d = grads.shape[0]
-        d0 = jnp.full(d, prior_precision)
-        m0 = jnp.zeros(d) if prior_mean is None else prior_mean
+        d0 = jnp.full(d, prior_precision, dtype)
+        m0 = (
+            jnp.zeros(d, dtype)
+            if prior_mean is None
+            else jnp.asarray(prior_mean, dtype)
+        )
         eta_0 = d0 * m0
 
         # Current mean via gaussx structured solve
@@ -143,7 +151,7 @@ def blr_low_rank(
         # positive eigenvectors).  This O(d^3) eigendecomposition is a
         # scalability bottleneck for large d; a rank-1 GGN-specific fast
         # path could be added later but requires different numerics.
-        h = _hessian_fn(m_t, grads)
+        h = jnp.asarray(_hessian_fn(m_t, grads), dtype)
         h_m_t = h @ m_t
 
         # Diagonal precision update

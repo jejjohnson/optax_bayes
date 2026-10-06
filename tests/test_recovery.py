@@ -64,6 +64,9 @@ def _train(opt, d, grad_fn, num_steps):
 
 
 class TestFullRankExactRecovery:
+    @pytest.mark.x64_only(
+        reason="asserts the precision to rtol=1e-8, below float32 eps"
+    )
     def test_loglik_convention_with_exact_hessian(self, linear_gaussian):
         x, y = linear_gaussian["x"], linear_gaussian["y"]
         d = x.shape[1]
@@ -85,6 +88,9 @@ class TestFullRankExactRecovery:
         )
         np.testing.assert_allclose(params, linear_gaussian["post_mean"], rtol=1e-6)
 
+    @pytest.mark.x64_only(
+        reason="asserts the precision to rtol=1e-8, below float32 eps"
+    )
     def test_loss_convention_with_exact_hessian(self, linear_gaussian):
         x, y = linear_gaussian["x"], linear_gaussian["y"]
         d = x.shape[1]
