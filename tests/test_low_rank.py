@@ -55,9 +55,12 @@ class TestLowRankQuadratic:
     def test_ggn_loss_decreases(self):
         """Low-rank GGN drives the loss down.
 
-        Same setting as the full-rank test: the rank-1 outer product
-        H = -g g^T is unstable here under a near-flat prior, exactly as
-        it is for ``blr_full_rank``.
+        Same setting as the full-rank test. The rank-1 curvature
+        -H = g g^T leaves directions orthogonal to g with precision near
+        the prior s_0, where the mean step scales the error by
+        1 - rho / s_0. A prior with rho / s_0 < 2 keeps those directions
+        stable; rho / s_0 = 10 grows rounding error ninefold per step and
+        made the final loss depend on the CPU.
         """
         d = 3
         theta_star = jnp.ones(d) * 2.0
@@ -65,7 +68,7 @@ class TestLowRankQuadratic:
         def loss_fn(theta):
             return 0.5 * jnp.sum((theta - theta_star) ** 2)
 
-        opt = blr_low_rank_for_loss(learning_rate=0.1, rank=2, prior_precision=1e-2)
+        opt = blr_low_rank_for_loss(learning_rate=0.1, rank=2, prior_precision=0.1)
         theta = jnp.zeros(d)
         state = opt.init(theta)
         initial_loss = loss_fn(theta)

@@ -110,8 +110,10 @@ class TestFullRankQuadratic:
     def test_ggn_loss_decreases(self):
         """GGN full-rank drives the loss down.
 
-        The rank-1 outer product H = -g g^T couples dimensions,
-        so we use a smaller learning rate to keep the update stable.
+        The rank-1 curvature -H = g g^T leaves directions orthogonal to g
+        with precision near the prior s_0, where the mean step scales the
+        error by 1 - rho / s_0. A prior with rho / s_0 < 2 keeps those
+        directions stable, so the trajectory does not depend on rounding.
         """
         d = 3
         theta_star = jnp.ones(d) * 2.0
@@ -119,7 +121,7 @@ class TestFullRankQuadratic:
         def loss_fn(theta):
             return 0.5 * jnp.sum((theta - theta_star) ** 2)
 
-        opt = blr_full_rank_for_loss(learning_rate=0.1, prior_precision=1e-2)
+        opt = blr_full_rank_for_loss(learning_rate=0.1, prior_precision=0.1)
         theta = jnp.zeros(d)
         state = opt.init(theta)
         initial_loss = loss_fn(theta)
