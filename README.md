@@ -1,4 +1,9 @@
-# optax_bayes
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img alt="optax_bayes" src="docs/assets/logo-light.svg" width="440">
+  </picture>
+</p>
 
 [![Tests](https://github.com/jejjohnson/optax_bayes/actions/workflows/ci.yml/badge.svg)](https://github.com/jejjohnson/optax_bayes/actions/workflows/ci.yml)
 [![Lint](https://github.com/jejjohnson/optax_bayes/actions/workflows/lint.yml/badge.svg)](https://github.com/jejjohnson/optax_bayes/actions/workflows/lint.yml)
@@ -19,6 +24,8 @@ method. Structured solves are backed by
 [gaussx](https://github.com/jejjohnson/gaussx).
 
 **Documentation**: [jejjohnson.github.io/optax_bayes](https://jejjohnson.github.io/optax_bayes)
+
+<p align="center"><img src="docs/assets/diagrams/optax-bayes-overview.png" alt="optax_bayes in one picture: a plain optax loop passes gradients to a Bayesian-learning-rule transform for the diagonal, low-rank or full-rank family; the optimizer state holds natural parameters anchored by the prior; get_posterior and sample_posterior read the Gaussian posterior and Monte Carlo predictions out of it" width="100%"></p>
 
 ## Installation
 
@@ -48,7 +55,7 @@ for batch in dataloader:
     updates, state = opt.update(grads, state)
     params = optax.apply_updates(params, updates)
 
-mean, variance = get_posterior_diagonal(state)   # q(theta) = N(mean, diag(variance))
+mean, variance = get_posterior_diagonal(state)  # q(theta) = N(mean, diag(variance))
 ```
 
 Everything composes like a normal optax transform:
