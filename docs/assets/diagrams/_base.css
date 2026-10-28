@@ -1,0 +1,295 @@
+/* Shared design system for the geostack diagrams.
+ *
+ * One colour per package, used everywhere:
+ *   catalog  (find)    — violet
+ *   products (read)    — teal
+ *   patcher  (cut)     — blue
+ *   geotoolz (compute) — amber
+ *   result             — rose
+ *   foundations        — slate
+ *
+ * Each diagram is a fixed-width `#diagram` card; `render.py` screenshots
+ * that element at 2x into the PNG next to the HTML.
+ */
+
+:root {
+  --find: #7b6bb5;
+  --find-bg: #f1edf9;
+  --find-ink: #2d2545;
+  --read: #23978a;
+  --read-bg: #e2f4f1;
+  --read-ink: #12403a;
+  --cut: #3f6fb5;
+  --cut-bg: #e7effb;
+  --cut-ink: #1b2f50;
+  --compute: #cf9418;
+  --compute-bg: #fdf3da;
+  --compute-ink: #4a3506;
+  --out: #c2474f;
+  --out-bg: #fbe9ea;
+  --out-ink: #4a1d20;
+  --base: #64748b;
+  --base-bg: #f1f5f9;
+  --base-ink: #1e293b;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #94a3b8;
+  --card: #ffffff;
+  --page: #f8fafc;
+  --mono: "DejaVu Sans Mono", "Liberation Mono", ui-monospace, monospace;
+  --sans: "Inter", "Liberation Sans", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+  font-family: var(--sans);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+#diagram {
+  position: relative;
+  display: inline-block;
+  padding: 36px 40px 32px;
+  background: var(--page);
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+}
+
+/* ---- headings ---------------------------------------------------- */
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 26px;
+}
+
+/* ---- lanes: one rounded panel per package ------------------------ */
+
+.lane {
+  position: relative;
+  border-radius: 16px;
+  border: 1.5px solid var(--accent);
+  background: var(--tint);
+  padding: 14px 16px 16px;
+}
+
+.lane-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--ink-accent);
+}
+
+.lane-head .verb {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.lane-head .pkg {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.lane-head .imp {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.find {
+  --accent: var(--find);
+  --tint: var(--find-bg);
+  --ink-accent: var(--find-ink);
+}
+.read {
+  --accent: var(--read);
+  --tint: var(--read-bg);
+  --ink-accent: var(--read-ink);
+}
+.cut {
+  --accent: var(--cut);
+  --tint: var(--cut-bg);
+  --ink-accent: var(--cut-ink);
+}
+.compute {
+  --accent: var(--compute);
+  --tint: var(--compute-bg);
+  --ink-accent: var(--compute-ink);
+}
+.out {
+  --accent: var(--out);
+  --tint: var(--out-bg);
+  --ink-accent: var(--out-ink);
+}
+.base {
+  --accent: var(--base);
+  --tint: var(--base-bg);
+  --ink-accent: var(--base-ink);
+}
+
+/* ---- nodes: white cards inside lanes ----------------------------- */
+
+.node {
+  position: relative;
+  background: var(--card);
+  border: 1.5px solid var(--accent, var(--line));
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.node .name {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.node .name code,
+code.op {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.node .desc {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.node.solid {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.node.solid .name,
+.node.solid .desc {
+  color: #fff;
+}
+
+/* step badge: numbered circle in the node's corner */
+.step {
+  position: absolute;
+  top: -11px;
+  left: -11px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent, var(--ink));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 3px var(--page);
+}
+
+/* ---- chips: carrier / shape annotations -------------------------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: var(--ink);
+}
+
+.chip .t {
+  font-weight: 700;
+}
+
+.chip .s {
+  color: var(--muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* ---- connectors (drawn by _connect.js) --------------------------- */
+
+/* Stacking: lanes < wires < nodes < labels, so a wire is visible across
+ * lane borders but never draws over a card or its own label. */
+.lane {
+  z-index: 1;
+}
+
+svg.wires {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.node {
+  z-index: 3;
+}
+
+.wire-label {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+}
+
+/* ---- footnote ----------------------------------------------------- */
+
+.foot {
+  margin-top: 22px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend {
+  display: flex;
+  gap: 18px;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend i {
+  display: inline-block;
+  width: 26px;
+  height: 0;
+  border-top: 2px solid var(--line);
+}
+
+.legend i.dash {
+  border-top-style: dashed;
+}
