@@ -5,6 +5,41 @@
   </picture>
 </p>
 
+> [!WARNING]
+> **optax_bayes is retired.** The Bayesian learning rule now lives in [argminax](https://github.com/jejjohnson/argminax) as `argminax.blr`, from argminax 0.0.7 on:
+>
+> ```bash
+> pip install "argminax[optax] @ git+https://github.com/jejjohnson/argminax.git@v0.0.7"
+> ```
+>
+> This is the last release; importing `optax_bayes` raises a `DeprecationWarning`, the functions still work, and the repository will be archived. See [Moving to argminax](#moving-to-argminax) below.
+
+## Moving to argminax
+
+Every `argminax.blr` transform takes the gradient of the cost, as `optax.adam` does, and a curvature is the curvature of the cost. optax_bayes's `blr_diagonal`, `blr_full_rank`, `blr_low_rank` and `newton` took the gradient and Hessian of the log-likelihood instead, so the argminax function of the same name has the opposite sign: negate both before switching. The `_for_loss` wrappers, `blr_with_schedule` and `ivon` already used the cost and switch without a sign change. Every argument after the step size is keyword-only in argminax.
+
+| optax_bayes 0.0.3 | argminax.blr |
+|---|---|
+| `blr_diagonal_for_loss(lr, ...)` | `blr_diagonal(lr, ...)` |
+| `blr_full_rank_for_loss(lr, ...)` | `blr_full_rank(lr, ...)` |
+| `blr_low_rank_for_loss(lr, rank, ...)` | `blr_low_rank(lr, rank=rank, ...)` |
+| `blr_diagonal`, `blr_full_rank`, `blr_low_rank` (log-likelihood gradients) | the same names, with the gradients negated by the caller |
+| `blr_with_schedule(schedule_fn, ...)` | `blr_diagonal(schedule_fn, ...)`, which takes an optax schedule as its step size |
+| `hessian_estimator="ggn_diag"` or `"ggn"` | `curvature="ggn"` |
+| `hessian_estimator="identity"` | `curvature="identity"` |
+| `hessian_estimator=fn` on a `_for_loss` wrapper, `fn(mean, grads)` returning the loss Hessian | `curvature=fn`; argminax passes it the cost gradient, where optax_bayes passed the log-likelihood gradient |
+| `newton_for_loss(loss_hessian_fn)`, `loss_hessian_fn(mean)` | `newton(lambda mean, g: loss_hessian_fn(mean))` |
+| `newton(hessian_fn)`, `hessian_fn(mean, grads)` returning the log-likelihood Hessian | `newton(lambda mean, g: -hessian_fn(mean, -g))`, with the gradients negated by the caller |
+| `ivon(...)` | `ivon(...)` |
+| `get_posterior_diagonal`, `get_posterior_full_rank`, `get_posterior_low_rank` | `blr_posterior(state)`, an `argminax.curvature.Laplace` with `.mode` and the `.precision` operator, where optax_bayes returned the mean and the variance or covariance |
+| `get_posterior_ivon(state, params, weight_decay)` | `blr_posterior(state, params, weight_decay=weight_decay)` |
+| `sample_posterior_diagonal`, `sample_posterior_full_rank`, `sample_posterior_low_rank`, `sample_ivon` | `blr_posterior(...).sample(n, key=key)`, flat draws of shape `(n, D)`; map them to the parameter pytree with `jax.vmap(unravel)`, where `_, unravel = jax.flatten_util.ravel_pytree(params)` |
+| `BLRDiagState` | `BLRDiagonalState` |
+| `BLRFullRankState`, `BLRLowRankState`, `IVONState` | the same names |
+| `pip install "optax_bayes[gaussx]"` | the install line above; gaussx is a hard dependency of argminax |
+
+The [argminax BLR guide](https://jejjohnson.github.io/argminax/blr/) derives the rule in the cost convention and has a worked example.
+
 [![Tests](https://github.com/jejjohnson/optax_bayes/actions/workflows/ci.yml/badge.svg)](https://github.com/jejjohnson/optax_bayes/actions/workflows/ci.yml)
 [![Lint](https://github.com/jejjohnson/optax_bayes/actions/workflows/lint.yml/badge.svg)](https://github.com/jejjohnson/optax_bayes/actions/workflows/lint.yml)
 [![Type Check](https://github.com/jejjohnson/optax_bayes/actions/workflows/typecheck.yml/badge.svg)](https://github.com/jejjohnson/optax_bayes/actions/workflows/typecheck.yml)
