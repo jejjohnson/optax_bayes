@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>optax_bayes — train with optax, read off a posterior</title>
+<link rel="stylesheet" href="_base.css">
+<style>
+  #diagram { width: 1560px; }
+  .grid {
+    display: grid;
+    grid-template-columns: 260px 380px 280px 270px;
+    column-gap: 86px;
+    align-items: center;
+  }
+  .lane .node + .node { margin-top: 16px; }
+  .eq {
+    font-family: var(--mono); font-size: 13px; color: var(--ink-accent);
+    background: var(--card); border: 1.5px solid var(--accent);
+    border-radius: 10px; padding: 9px 12px; margin-top: 10px;
+  }
+  .base-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-top: 34px;
+  }
+  .slab {
+    display: flex; align-items: center; gap: 14px;
+    border-radius: 14px; padding: 12px 16px;
+    background: var(--base-bg); border: 1.5px solid #cbd5e1;
+  }
+  .slab .lib { font-weight: 700; font-size: 15px; white-space: nowrap; }
+  .slab .what { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  .slab code { font-family: var(--mono); font-size: 12px; color: var(--ink); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="diagram">
+  <div class="title">optax_bayes — train with optax, read off a posterior</div>
+  <div class="subtitle">The Bayesian learning rule as a GradientTransformation: the optimizer state is the Gaussian q(θ).</div>
+
+  <div class="grid">
+    <!-- column 1: the training loop -->
+    <div class="lane find" id="lane-loop">
+      <div class="lane-head"><span class="verb">loop</span><span class="pkg">plain optax</span></div>
+      <div class="node">
+        <div class="name">gradients</div>
+        <div class="desc"><code>jax.grad(loss_fn)(params, batch)</code></div>
+      </div>
+      <div class="node">
+        <div class="name">update</div>
+        <div class="desc"><code>opt.update(grads, state)</code> then <code>optax.apply_updates</code></div>
+      </div>
+      <div class="node">
+        <div class="name">composes</div>
+        <div class="desc">inside <code>optax.chain</code>, after clipping or any other transform</div>
+      </div>
+    </div>
+
+    <!-- column 2: the transforms -->
+    <div class="lane compute" id="lane-transforms">
+      <div class="lane-head"><span class="verb">transforms</span><span class="pkg">one per variational family</span></div>
+      <div class="node">
+        <div class="name">diagonal</div>
+        <div class="desc"><code>blr_diagonal_for_loss</code> · <code>blr_with_schedule</code> — O(d) per step</div>
+      </div>
+      <div class="node">
+        <div class="name">low rank <span class="imp">diag(D) + U Uᵀ</span></div>
+        <div class="desc"><code>blr_low_rank_for_loss</code> — SLANG's thin-SVD update</div>
+      </div>
+      <div class="node">
+        <div class="name">full rank</div>
+        <div class="desc"><code>blr_full_rank_for_loss</code> — dense precision, <code>gaussx</code> extra</div>
+      </div>
+      <div class="node">
+        <div class="name">special cases</div>
+        <div class="desc"><code>ivon</code> for deep networks; <code>newton_for_loss</code>, the case <span style="white-space:nowrap">ρ = 1</span></div>
+      </div>
+    </div>
+
+    <!-- column 3: the optimizer state -->
+    <div class="lane cut" id="lane-state">
+      <div class="lane-head"><span class="verb">state</span><span class="pkg">natural parameters</span></div>
+      <div class="eq">s = 1 / v</div>
+      <div class="eq">η = s · m</div>
+      <div class="node" style="margin-top: 16px">
+        <div class="name">prior</div>
+        <div class="desc"><code>prior_mean</code> · <code>prior_precision</code> anchor every update</div>
+      </div>
+    </div>
+
+    <!-- column 4: what comes out -->
+    <div class="lane out" id="lane-out">
+      <div class="lane-head"><span class="verb">out</span><span class="pkg">the posterior</span></div>
+      <div class="node">
+        <div class="name">q(θ) = 𝒩(m, Σ)</div>
+        <div class="desc"><code>get_posterior_diagonal</code> · <code>_low_rank</code> · <code>_full_rank</code> · <code>get_posterior_ivon</code></div>
+      </div>
+      <div class="node solid">
+        <div class="name">Monte Carlo predictions</div>
+        <div class="desc"><code>sample_posterior_*</code> · <code>sample_ivon</code>; low rank never densifies Σ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="base-row">
+    <div class="slab">
+      <div class="lib">optax</div>
+      <div class="what">Every transform is a <code>GradientTransformation</code>: chain it, schedule it, swap it for <code>optax.adam</code>.</div>
+    </div>
+    <div class="slab">
+      <div class="lib">gaussx · lineax</div>
+      <div class="what">Structured solves and Woodbury sampling for the full- and low-rank families.</div>
+    </div>
+    <div class="slab">
+      <div class="lib">jax</div>
+      <div class="what">The core needs only <code>jax</code>, <code>optax</code>, <code>jaxtyping</code> and <code>lineax</code>.</div>
+    </div>
+  </div>
+</div>
+<script src="_connect.js"></script>
+<script>
+  wire("lane-loop", "lane-transforms", { label: "<span class='t'>grads</span>", color: "#7b6bb5" });
+  wire("lane-transforms", "lane-state", { label: "<span class='t'>update</span>", color: "#cf9418" });
+  wire("lane-state", "lane-out", { label: "<span class='t'>m · v</span>", color: "#3f6fb5" });
+  ready();
+</script>
+</body>
+</html>
