@@ -38,7 +38,7 @@ from optax_bayes._src.wrappers import (
 )
 
 
-__version__ = "0.0.3"
+__version__ = "0.1.0"
 
 warnings.warn(
     "optax_bayes is retired and gets no further releases: the Bayesian learning "
