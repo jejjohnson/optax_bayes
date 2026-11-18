@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.0](https://github.com/jejjohnson/optax_bayes/compare/v0.0.3...v0.1.0) (2026-11-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* importing optax_bayes now raises a DeprecationWarning that points to argminax.blr. This is the final release; the functions keep working unchanged.
+
+### Miscellaneous
+
+* retire optax_bayes in favour of argminax.blr with a final release that warns on import ([#69](https://github.com/jejjohnson/optax_bayes/issues/69)) ([5de7e72](https://github.com/jejjohnson/optax_bayes/commit/5de7e729f4bda31aee9d2f62e00ec218029ffc90))
+
 ## [0.0.3](https://github.com/jejjohnson/optax_bayes/compare/v0.0.2...v0.0.3) (2026-10-06)
 
 
