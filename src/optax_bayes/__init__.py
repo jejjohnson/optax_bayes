@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 from optax_bayes._src.diagonal import blr_diagonal as blr_diagonal
 from optax_bayes._src.full_rank import blr_full_rank as blr_full_rank
 from optax_bayes._src.ivon import (
@@ -37,3 +39,14 @@ from optax_bayes._src.wrappers import (
 
 
 __version__ = "0.0.3"
+
+warnings.warn(
+    "optax_bayes is retired and gets no further releases: the Bayesian learning "
+    "rule now lives in argminax.blr, from argminax 0.0.7 on. Its "
+    "transforms take the gradient of the cost, so optax_bayes.blr_diagonal, "
+    "which takes the log-likelihood gradient, maps to "
+    "argminax.blr.blr_diagonal with the gradient negated. The migration table "
+    "is at https://github.com/jejjohnson/optax_bayes#moving-to-argminax",
+    DeprecationWarning,
+    stacklevel=2,
+)

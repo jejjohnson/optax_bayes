@@ -17,7 +17,7 @@ classifiers = [
     "Natural Language :: English",
     "License :: OSI Approved :: MIT License",
     "Intended Audience :: Science/Research",
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 7 - Inactive",
 ]
 dependencies = [
     "jax>=0.4.35",
@@ -114,6 +114,10 @@ markers = [
     "slow: individually expensive tests (>~1.5s: heavy numerics, jit+grad+vmap sweeps)",
     "integration: end-to-end workflows (posterior recovery fits, long training loops)",
     "x64_only(reason): needs float64; skipped in the no-x64 (float32) lane",
+]
+# The package warns on import that it is retired (tests/test_retired.py checks it).
+filterwarnings = [
+    "ignore:optax_bayes is retired:DeprecationWarning",
 ]
 
 [tool.coverage.run]
